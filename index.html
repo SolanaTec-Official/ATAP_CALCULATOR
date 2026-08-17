@@ -1,0 +1,3041 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar ATAP Bill Calculator</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN for 3-month trend visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        html {
+            font-size: 16px;
+        }
+
+        html.text-large {
+            font-size: 19px;
+        }
+
+        html.text-xlarge {
+            font-size: 22px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F1C232;
+        }
+
+        /* Custom styles for results table */
+        .results-table th,
+        .results-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        .results-table th {
+            background-color: #e5e7eb;
+        }
+
+        .results-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .tab-button {
+            background: #ffffff;
+            color: #142850;
+            padding: 0.9rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.25s ease-in-out;
+            flex-grow: 1;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: #f3f4f6;
+            color: #0f1e35;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(to right, #38bdf8, #2563eb, #0f1e35);
+            color: white;
+            font-weight: 800;
+            border-color: #0f1e35;
+            transform: scale(1.08);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            z-index: 5;
+        }
+
+        /* Universal gradient button for ALL calculate actions */
+        .gradient-btn {
+            background: linear-gradient(to right, #38bdf8, #2563eb, #0f1e35);
+            color: white !important;
+            font-weight: 700;
+            padding: 0.9rem 1rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            display: block;
+            text-align: center;
+            transition: 0.25s ease-in-out;
+            border: none;
+        }
+
+        .gradient-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.20);
+        }
+
+        .gradient-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* --- Animation for Button Click/Enter Key --- */
+        @keyframes button-press {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            }
+
+            50% {
+                transform: scale(0.98);
+                box-shadow: 0 0 0 3px rgba(241, 194, 50, 0.7);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            }
+        }
+
+        .calculate-button-animate {
+            animation: button-press 0.3s ease-out;
+        }
+
+        /* --- Animation for Toast Pop-up --- */
+        #toast-notification {
+            transition: top 0.3s ease-out, opacity 0.3s ease-out;
+            top: 50%;
+            opacity: 0;
+        }
+
+        .toast-show {
+            opacity: 1 !important;
+        }
+
+        /* --- Animation for Results Section --- */
+        @keyframes slideInFromLeft {
+            0% {
+                opacity: 0;
+                transform: translateX(-100%);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .animate-slide-in {
+            animation: slideInFromLeft 1s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .result-row-animate {
+            opacity: 0;
+            animation: fadeIn 0.4s ease-in forwards;
+        }
+
+        /* Event Modal Transitions */
+        #event-modal {
+            transition: opacity 0.3s ease-out;
+        }
+
+        #event-modal.hidden {
+            display: none;
+        }
+
+        #event-modal>div {
+            transition: transform 0.3s ease-out;
+        }
+
+        .event-show {
+            opacity: 1 !important;
+        }
+
+        .event-show>div {
+            transform: scale(1) !important;
+        }
+
+        /* --- 3-Month Trend Input Table --- */
+        .trend-input-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .trend-input-table th,
+        .trend-input-table td {
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .trend-input-table th {
+            background-color: #eef2ff;
+            color: #142850;
+            font-weight: 600;
+        }
+
+        .trend-input-table td:first-child {
+            font-weight: 600;
+            color: #374151;
+            background-color: #f9fafb;
+            white-space: nowrap;
+        }
+
+        .trend-input {
+            width: 100%;
+            min-width: 90px;
+            padding: 0.4rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+        }
+
+        .trend-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        /* --- Trend badges --- */
+        .trend-up {
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        .trend-down {
+            color: #16a34a;
+            font-weight: 700;
+        }
+
+        .trend-flat {
+            color: #6b7280;
+            font-weight: 700;
+        }
+
+        /* --- Explanation box --- */
+        .explain-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-top: 1rem;
+            line-height: 1.6;
+            color: #1e293b;
+        }
+
+        .explain-box h4 {
+            font-weight: 700;
+            color: #0f1e35;
+            margin-bottom: 0.5rem;
+            font-size: 1.05rem;
+        }
+
+        .explain-box ul {
+            list-style: disc;
+            padding-left: 1.25rem;
+        }
+
+        .explain-box li {
+            margin-bottom: 0.4rem;
+        }
+
+        .explain-warn {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        /* --- Field help ("where do I find this?") --- */
+        .field-help {
+            margin-top: 0.35rem;
+            font-size: 0.85rem;
+        }
+
+        .field-help summary {
+            cursor: pointer;
+            color: #1d4ed8;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .field-help summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .field-help summary::before {
+            content: "ⓘ";
+            font-size: 1rem;
+        }
+
+        .field-help[open] summary {
+            color: #0f1e35;
+        }
+
+        .field-help-body {
+            margin-top: 0.4rem;
+            background: #eff6ff;
+            border: 1px dashed #93c5fd;
+            border-radius: 0.4rem;
+            padding: 0.6rem 0.75rem;
+            color: #1e3a5f;
+        }
+
+        /* --- Guide section --- */
+        .guide-section {
+            background: #ffffff;
+            border: 2px solid #142850;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .guide-section > summary {
+            cursor: pointer;
+            list-style: none;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(to right, #38bdf8, #2563eb, #0f1e35);
+            color: white;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .guide-section > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .guide-section > summary::after {
+            content: "Tap to open ▾";
+            font-weight: 600;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .guide-section[open] > summary::after {
+            content: "Tap to close ▴";
+        }
+
+        .guide-step {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .guide-step-num {
+            flex-shrink: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            background: #F89B1C;
+            color: white;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .guide-step h4 {
+            font-weight: 700;
+            color: #0f1e35;
+            margin-bottom: 0.3rem;
+            font-size: 1.05rem;
+        }
+
+        .guide-step p {
+            color: #374151;
+            line-height: 1.55;
+        }
+
+        .guide-step .example-tag {
+            display: inline-block;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.3rem;
+            padding: 0.1rem 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin-top: 0.35rem;
+        }
+
+        /* --- Accessibility bar --- */
+        #a11y-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            max-width: 56rem;
+            margin: 0 auto 0.75rem auto;
+        }
+
+        .a11y-btn {
+            background: #0f1e35;
+            color: white;
+            font-weight: 700;
+            border: none;
+            border-radius: 0.4rem;
+            padding: 0.5rem 0.85rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .a11y-btn:hover {
+            background: #1d3a63;
+        }
+
+        /* --- Print / PDF --- */
+        .no-print {
+            /* visible on screen, hidden only in print media below */
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        .print-letterhead {
+            background: linear-gradient(135deg, #0f1e35 0%, #142850 55%, #1d3a63 100%);
+            color: #ffffff;
+            padding: 22px 26px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .print-letterhead::after {
+            content: "";
+            position: absolute;
+            right: -40px;
+            top: -40px;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: rgba(248, 155, 28, 0.18);
+        }
+
+        .print-letterhead .eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 0.7rem;
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        .print-letterhead h1 {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 4px 0 0 0;
+        }
+
+        .print-letterhead .subtitle {
+            color: #F89B1C;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .print-letterhead .meta {
+            color: #cbd5e1;
+            font-size: 0.78rem;
+            margin-top: 12px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 10px;
+        }
+
+        .print-letterhead .meta strong {
+            color: #ffffff;
+        }
+
+        .print-summary-cards {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .print-summary-card {
+            flex: 1;
+            min-width: 150px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-top: 4px solid #2563eb;
+            border-radius: 10px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .print-summary-card .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6b7280;
+            font-weight: 700;
+        }
+
+        .print-summary-card .value {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #0f1e35;
+            margin-top: 4px;
+        }
+
+        .print-summary-card .sub {
+            font-size: 0.72rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .print-summary-card.accent-green { border-top-color: #16a34a; }
+        .print-summary-card.accent-orange { border-top-color: #F89B1C; }
+        .print-summary-card.accent-sky { border-top-color: #38bdf8; }
+
+        /* --- Savings Hero (on-screen, single-month result) --- */
+        .savings-hero {
+            background: linear-gradient(135deg, #16a34a 0%, #0f9d58 45%, #0f1e35 100%);
+            color: #ffffff;
+            border-radius: 1.1rem;
+            padding: 1.75rem 1.85rem;
+            margin-top: 1rem;
+            box-shadow: 0 12px 28px rgba(15, 30, 53, 0.28);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .savings-hero::after {
+            content: "";
+            position: absolute;
+            right: -50px;
+            top: -50px;
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: rgba(248, 155, 28, 0.18);
+        }
+
+        .savings-hero .hero-left {
+            position: relative;
+            z-index: 1;
+        }
+
+        .savings-hero .hero-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.9;
+            font-weight: 700;
+        }
+
+        .savings-hero .hero-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-top: 2px;
+        }
+
+        .savings-hero .hero-sub {
+            font-size: 0.9rem;
+            opacity: 0.92;
+            margin-top: 4px;
+        }
+
+        .savings-hero .hero-icon {
+            font-size: 3rem;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        }
+
+        .savings-hero .hero-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 9999px;
+            padding: 0.15rem 0.65rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+
+        /* --- On-screen headline cards (nicer than a plain table) --- */
+        .headline-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-top: 5px solid #2563eb;
+            border-radius: 0.85rem;
+            padding: 1rem 1.15rem;
+            box-shadow: 0 4px 12px rgba(15, 30, 53, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .headline-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(15, 30, 53, 0.14);
+        }
+
+        .headline-card .hc-icon {
+            font-size: 1.4rem;
+        }
+
+        .headline-card .hc-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6b7280;
+            font-weight: 700;
+            margin-top: 0.3rem;
+        }
+
+        .headline-card .hc-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #0f1e35;
+            margin-top: 2px;
+        }
+
+        .headline-card .hc-sub {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .headline-card.accent-green { border-top-color: #16a34a; }
+        .headline-card.accent-orange { border-top-color: #F89B1C; }
+        .headline-card.accent-sky { border-top-color: #38bdf8; }
+
+        .print-footer {
+            margin-top: 22px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.72rem;
+            color: #9ca3af;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .print-section-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f1e35;
+            margin: 18px 0 8px 0;
+            padding-left: 10px;
+            border-left: 4px solid #F89B1C;
+        }
+
+        @media print {
+            @page {
+                margin: 14mm 12mm;
+            }
+
+            body.print-mode * {
+                visibility: hidden;
+            }
+
+            body.print-mode #print-area,
+            body.print-mode #print-area * {
+                visibility: visible;
+            }
+
+            body.print-mode #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0;
+            }
+
+            body.print-mode .no-print {
+                display: none !important;
+            }
+
+            body.print-mode {
+                background: #ffffff !important;
+            }
+
+            body.print-mode .print-only {
+                display: block !important;
+            }
+
+            body.print-mode .print-summary-cards.print-only {
+                display: flex !important;
+            }
+
+            body.print-mode * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
+            body.print-mode .results-table th {
+                background: #0f1e35 !important;
+                color: #ffffff !important;
+            }
+
+            body.print-mode .results-table tr:nth-child(even) {
+                background: #f3f4f6 !important;
+            }
+
+            body.print-mode .results-table,
+            body.print-mode .explain-box,
+            body.print-mode .explain-warn,
+            body.print-mode #trend-conclusion,
+            body.print-mode .print-summary-card,
+            body.print-mode canvas {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8">
+
+    <!-- Toast Notification Pop-up -->
+    <div id="toast-notification"
+        class="fixed left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-xl bg-green-600 text-white text-lg font-bold z-50">
+    </div>
+
+    <!-- Accessibility bar: bigger text for older / low-vision users -->
+    <div id="a11y-bar" class="no-print">
+        <span class="text-sm font-semibold text-[#142850] mr-1">Text size:</span>
+        <button type="button" class="a11y-btn" data-size="normal">A</button>
+        <button type="button" class="a11y-btn" data-size="large">A+</button>
+        <button type="button" class="a11y-btn" data-size="xlarge">A++</button>
+    </div>
+
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg">
+
+        <!-- Header Section -->
+        <header class="bg-[#0f1e35] text-[#F89B1C] p-6 py-10 rounded-t-xl text-center">
+            <h1 class="text-3xl font-bold">
+                Solar ATAP Bill Calculator
+            </h1>
+            <p class="mt-2 text-[#F89B1C] text-lg">
+                Estimate your TNB bill under the Solar ATAP scheme.
+            </p>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="p-6 md:p-8" style="background-color: #FBE79C;">
+
+            <!-- First-time user guide -->
+            <details class="guide-section no-print" open>
+                <summary>📘 New here? Read this first — 4 easy steps</summary>
+                <div class="guide-step">
+                    <div class="guide-step-num">1</div>
+                    <div>
+                        <h4>Get your latest TNB bill</h4>
+                      <p>
+                         <p>Open the <strong>MyTNB</strong> app, then select your <strong>latest TNB bill</strong>.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">2</div>
+                    <div>
+                        <h4>Get your Solar Generation from the Solis app</h4>
+                      <p>
+                        Open the <strong>SolisCloud</strong> app → your Station → Overview. Tap the <strong>Year</strong> view tab, then find the month that matches your latest TNB bill. The kWh figure shown for that month is your <strong>Solar Generation (kWh)</strong>.
+                        <span class="example-tag">Example: Year view → Jul → 431 kWh</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">3</div>
+                    <div>
+                        <h4>Find the AFA rate on your TNB bill</h4>
+                       <p>
+                          Open your <strong>latest TNB bill</strong>. In the <strong>Bill Details</strong> section, look for the row with the label <strong>"AFA"</strong>.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">4</div>
+                    <div>
+                        <h4>Fill in the form and press Calculate</h4>
+                        <p>Choose your tariff below, type in the numbers you just found, leave Battery Charge/Discharge
+                            at 0 if you don't have a battery, and press the blue <strong>Calculate ATAP Bill</strong>
+                            button. Every field also has a small <strong>ⓘ</strong> link under it if you need a
+                            reminder of where that number comes from.</p>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Client Name -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+                <label for="client-name" class="block text-gray-700 font-medium mb-1">Name</label>
+                <input type="text" id="client-name" placeholder="Enter your/client name"
+                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <!-- Tab header -->
+            <div id="tabs-row" class="flex border-b border-gray-200 mb-6 no-print">
+                <button id="tab-calculate" class="tab-button active">Calculate ATAP Bill</button>
+                <button id="tab-trend" class="tab-button">3-Month Trend Analysis</button>
+            </div>
+
+            <div id="tab-content">
+                <div id="content-calculate" class="tab-pane">
+                    <div id="calc-inputs-wrapper" class="no-print">
+
+                    <!-- Tariff Selector Container -->
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Choose a Tariff</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="calc-tariff-type-select" class="block text-gray-700 font-medium mb-1">Tariff
+                                    Type</label>
+                                <select id="calc-tariff-type-select"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="domestic">Domestic</option>
+                                    <option value="non-domestic">Non-Domestic</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="calc-tariff-category-select"
+                                    class="block text-gray-700 font-medium mb-1">Category</label>
+                                <select id="calc-tariff-category-select"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="general">General</option>
+                                    <option value="TOU">TOU (Time of Use)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optional System Info -->
+<div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-1">System Info (Optional)</h2>
+    <p class="text-sm text-gray-500 mb-4">
+        Used to show a reference average solar generation figure alongside your results.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- PV System Capacity -->
+        <div>
+            <label for="sys-pv-capacity" class="block text-gray-700 font-medium mb-1">
+                PV System Capacity (kWp)
+            </label>
+            <input type="number" id="sys-pv-capacity" min="0" step="0.01" placeholder="e.g. 8.26"
+                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            <details class="field-help">
+                <summary>Where do I find this?</summary>
+                <div class="field-help-body">This is the client's installed solar system size in kWp
+                    (kilowatt-peak) — stated on the solar quotation/contract, or in the Solis app under
+                    Station Info.</div>
+            </details>
+        </div>
+
+        <!-- Area -->
+        <div>
+            <label for="sys-area-select" class="block text-gray-700 font-medium mb-1">
+                Area
+            </label>
+            <select id="sys-area-select"
+                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <option value="Johor Bahru">Johor Bahru</option>
+                <option value="Austin/Tebrau/Setia Tropika">Austin / Tebrau / Setia Tropika</option>
+                <option value="Kluang/Batu Pahat">Kluang / Batu Pahat</option>
+                <option value="Muar/Malacca">Muar / Malacca</option>
+                <option value="KL/Selangor">Kuala Lumpur / Selangor</option>
+            </select>
+        </div>
+
+        <!-- Average 12-Month Solar Generation -->
+        <div>
+            <label class="block text-gray-700 font-medium mb-1">
+                Average 12-Month Solar Generation (kWh)
+            </label>
+            <input
+                type="text"
+                id="avg-solar-generation"
+                readonly
+                class="w-full p-3 bg-gray-100 border border-gray-300 rounded-md font-semibold">
+        </div>
+
+    </div>
+</div>
+                    <!-- Domestic General ATAP Form -->
+                    <form id="atap-dg-form" class="form-pane bg-blue-50 p-6 rounded-lg border border-blue-200"
+                        onsubmit="event.preventDefault(); triggerCalculation('atap-dg-button');">
+                        <h3 class="text-xl font-bold mb-4 text-blue-800">Domestic (General)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="mb-4">
+                                <label for="atap-dg-import" class="block text-gray-700 font-medium mb-1">Import
+                                    (kWh)</label>
+                                <input type="number" id="atap-dg-import" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, look at the Jumlah Penggunaan Anda
+                                        </div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dg-solar" class="block text-gray-700 font-medium mb-1">Solar
+                                    Generation (kWh)</label>
+                                <input type="number" id="atap-dg-solar" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Open the <strong>SolisCloud app</strong> → your
+                                        Station → Overview. Tap the <strong>Year</strong> view tab, then find the
+                                        month that matches your TNB bill. Use that month's kWh figure as your
+                                        Solar Generation.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dg-export" class="block text-gray-700 font-medium mb-1">Export
+                                    (kWh)</label>
+                                <input type="number" id="atap-dg-export" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, look at Lebihan Penjanaan Anda</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dg-charge" class="block text-gray-700 font-medium mb-1">Battery
+                                    Charge (kWh)</label>
+                                <input type="number" id="atap-dg-charge" min="0" step="0.01" value="0"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Only fill this in if you have a battery. In the Solis
+                                        app, check the monthly "Battery Charge" figure. No battery? Leave this as 0.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dg-discharge" class="block text-gray-700 font-medium mb-1">Battery
+                                    Discharge (kWh)</label>
+                                <input type="number" id="atap-dg-discharge" min="0" step="0.01" value="0"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Only fill this in if you have a battery. In the Solis
+                                        app, check the monthly "Battery Discharge" figure. No battery? Leave this as 0.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dg-afa" class="block text-gray-700 font-medium mb-1">AFA</label>
+                                <input type="number" id="atap-dg-afa" step="0.0001" value="-0.0145"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, find the <strong>AFA</strong> line
+                                        (shown in sen/kWh). Divide that number by 100. Example: bill shows
+                                        "-1.45 sen/kWh" → enter <strong>-0.0145</strong>.</div>
+                                </details>
+                            </div>
+                        </div>
+                        <div class="mb-4 bg-yellow-50 border-2 border-yellow-400 rounded-md p-4">
+                            <label for="atap-dg-actual-bill" class="block text-gray-700 font-medium mb-1">💡 Actual
+                                TNB Bill Amount (RM) — <span class="text-red-600">Required</span></label>
+                            <input type="number" id="atap-dg-actual-bill" min="0" step="0.01" placeholder="e.g. 85.40" required
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <details class="field-help">
+                                <summary>Why enter this?</summary>
+                                <div class="field-help-body">We no longer show a self-calculated "final bill" —
+                                    charges like AFA and Caj Peruncitan can shift slightly month to month, so any
+                                    estimate risks being wrong. Instead, type in the client's real TNB bill amount
+                                    here — we'll use it directly to work out the true savings.</div>
+                            </details>
+                        </div>
+                        <button id="atap-dg-button" class="gradient-btn">Calculate ATAP Bill</button>
+                    </form>
+
+                    <!-- Domestic TOU ATAP Form -->
+                    <form id="atap-dt-form" class="form-pane bg-indigo-50 p-6 rounded-lg border border-indigo-200 hidden"
+                        onsubmit="event.preventDefault(); triggerCalculation('atap-dt-button');">
+                        <h3 class="text-xl font-bold mb-4 text-indigo-800">Domestic (TOU)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="mb-4">
+                                <label for="atap-dt-import" class="block text-gray-700 font-medium mb-1">Import
+                                    (kWh)</label>
+                                <input type="number" id="atap-dt-import" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, look at the meter reading section
+                                        for <strong>Import (kWh)</strong> — the electricity you bought from TNB this
+                                        month.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dt-solar" class="block text-gray-700 font-medium mb-1">Solar
+                                    Generation (kWh)</label>
+                                <input type="number" id="atap-dt-solar" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">SolisCloud app → your Station → Overview → tap the
+                                        <strong>Year</strong> view tab → find the month matching your billing
+                                        month and use that kWh figure.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dt-export" class="block text-gray-700 font-medium mb-1">Export
+                                    (kWh)</label>
+                                <input type="number" id="atap-dt-export" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, same section as Import — look for
+                                        <strong>Export (kWh)</strong>.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dt-charge" class="block text-gray-700 font-medium mb-1">Battery
+                                    Charge (kWh)</label>
+                                <input type="number" id="atap-dt-charge" min="0" step="0.01" value="0"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Only if you have a battery — check the Solis app's
+                                        monthly "Battery Charge" figure. No battery? Leave as 0.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dt-discharge" class="block text-gray-700 font-medium mb-1">Battery
+                                    Discharge (kWh)</label>
+                                <input type="number" id="atap-dt-discharge" min="0" step="0.01" value="0"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Only if you have a battery — check the Solis app's
+                                        monthly "Battery Discharge" figure. No battery? Leave as 0.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dt-afa" class="block text-gray-700 font-medium mb-1">AFA (RM_____/kWh)</label>
+                                <input type="number" id="atap-dt-afa" step="0.0001" value="-0.0145"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Find the <strong>AFA</strong> line on your TNB bill
+                                        (in sen/kWh) and divide by 100. Example: "-1.45 sen/kWh" → enter
+                                        <strong>-0.0145</strong>.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-dt-insentif" class="block text-gray-700 font-medium mb-1">Pelarasan
+                                    Insentif (RM/kWh)</label>
+                                <input type="number" id="atap-dt-insentif" step="0.0001" value="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Find the <strong>Pelarasan Insentif</strong> line on
+                                        the client's TNB bill (usually shown as RM/kWh, e.g. RM0.01/kWh). This
+                                        differs from bill to bill, so always check the client's own bill instead
+                                        of relying on the default.</div>
+                                </details>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="atap-dt-peak" class="block text-gray-700 font-medium mb-1">Peak Usage
+                                Percentage (%) — applied to both Import and Export</label>
+                            <input type="range" id="atap-dt-peak" min="0" max="100" value="50"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            <span id="atap-dt-peak-value" class="text-sm text-gray-600">50%</span>
+                            <details class="field-help">
+                                <summary>Where do I find this?</summary>
+                                <div class="field-help-body">Your TNB TOU bill splits usage into "Peak" and
+                                    "Off-Peak". If it shows both numbers, work out what % of your total was Peak
+                                    (Peak ÷ Total × 100). Not sure? 50% is a reasonable default.</div>
+                            </details>
+                        </div>
+                        <div class="mb-4 bg-yellow-50 border-2 border-yellow-400 rounded-md p-4">
+                            <label for="atap-dt-actual-bill" class="block text-gray-700 font-medium mb-1">💡 Actual
+                                TNB Bill Amount (RM) — <span class="text-red-600">Required</span></label>
+                            <input type="number" id="atap-dt-actual-bill" min="0" step="0.01" placeholder="e.g. 85.40" required
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <details class="field-help">
+                                <summary>Why enter this?</summary>
+                                <div class="field-help-body">We no longer show a self-calculated "final bill" —
+                                    charges like AFA, Pelarasan Insentif and Caj Peruncitan can shift slightly month
+                                    to month, so any estimate risks being wrong. Instead, type in the client's real
+                                    TNB bill amount here — we'll use it directly to work out the true savings.</div>
+                            </details>
+                        </div>
+                        <button id="atap-dt-button" class="gradient-btn">Calculate ATAP Bill</button>
+                    </form>
+
+                    <!-- Non-Domestic ATAP Form -->
+                    <form id="atap-nd-form" class="form-pane bg-purple-50 p-6 rounded-lg border border-purple-200 hidden"
+                        onsubmit="event.preventDefault(); triggerCalculation('atap-nd-button');">
+                        <h3 class="text-xl font-bold mb-4 text-purple-800">Non-Domestic</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="mb-4">
+                                <label for="atap-nd-import" class="block text-gray-700 font-medium mb-1">Import
+                                    (kWh)</label>
+                                <input type="number" id="atap-nd-import" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, look at the meter reading section
+                                        for <strong>Import (kWh)</strong>.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-nd-solar" class="block text-gray-700 font-medium mb-1">Solar
+                                    Generation (kWh)</label>
+                                <input type="number" id="atap-nd-solar" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">SolisCloud app → Station → Overview → tap the
+                                        <strong>Year</strong> view tab → find the month matching your billing
+                                        month and use that kWh figure.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-nd-export" class="block text-gray-700 font-medium mb-1">Export
+                                    (kWh)</label>
+                                <input type="number" id="atap-nd-export" min="0" step="0.01"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">On your TNB bill, same section as Import — look for
+                                        <strong>Export (kWh)</strong>.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-nd-charge" class="block text-gray-700 font-medium mb-1">Battery
+                                    Charge (kWh)</label>
+                                <input type="number" id="atap-nd-charge" min="0" step="0.01" value="0"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Only if you have a battery — Solis app monthly
+                                        "Battery Charge". No battery? Leave as 0.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-nd-discharge" class="block text-gray-700 font-medium mb-1">Battery
+                                    Discharge (kWh)</label>
+                                <input type="number" id="atap-nd-discharge" min="0" step="0.01" value="0"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Only if you have a battery — Solis app monthly
+                                        "Battery Discharge". No battery? Leave as 0.</div>
+                                </details>
+                            </div>
+                            <div class="mb-4">
+                                <label for="atap-nd-afa" class="block text-gray-700 font-medium mb-1">AFA (RM_____/kWh)</label>
+                                <input type="number" id="atap-nd-afa" step="0.0001" value="-0.0145"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <details class="field-help">
+                                    <summary>Where do I find this?</summary>
+                                    <div class="field-help-body">Find the <strong>AFA</strong> line on your TNB bill
+                                        (sen/kWh), divide by 100. Example: "-1.45 sen/kWh" → enter
+                                        <strong>-0.0145</strong>.</div>
+                                </details>
+                            </div>
+                        </div>
+                        <div id="atap-nd-demand-group" class="mb-4 hidden">
+                            <label for="atap-nd-demand" class="block text-gray-700 font-medium mb-1">Maximum Demand
+                                (kW)</label>
+                            <input type="number" id="atap-nd-demand" min="0" step="0.01"
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <details class="field-help">
+                                <summary>Where do I find this?</summary>
+                                <div class="field-help-body">On your TNB bill for Medium/High Voltage accounts, look
+                                    for "Maximum Demand" (kW) — the highest power draw recorded during the month.</div>
+                            </details>
+                        </div>
+                        <div id="atap-nd-peak-group" class="mb-4 hidden">
+                            <label for="atap-nd-peak" class="block text-gray-700 font-medium mb-1">Peak Usage
+                                Percentage (%) — applied to Import</label>
+                            <input type="range" id="atap-nd-peak" min="0" max="100" value="50"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                            <span id="atap-nd-peak-value" class="text-sm text-gray-600">50%</span>
+                            <details class="field-help">
+                                <summary>Where do I find this?</summary>
+                                <div class="field-help-body">Your TNB TOU bill splits usage into "Peak" and
+                                    "Off-Peak". Work out Peak ÷ Total × 100. Not sure? 50% is a reasonable default.</div>
+                            </details>
+                        </div>
+                        <div id="atap-nd-insentif-group" class="mb-4 hidden">
+                            <label for="atap-nd-insentif" class="block text-gray-700 font-medium mb-1">Pelarasan
+                                Insentif (RM/kWh)</label>
+                            <input type="number" id="atap-nd-insentif" step="0.0001" value="0.01"
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <details class="field-help">
+                                <summary>Where do I find this?</summary>
+                                <div class="field-help-body">Find the <strong>Pelarasan Insentif</strong> line on the
+                                    client's TNB bill (RM/kWh). This differs from bill to bill, so check the
+                                    client's own bill instead of relying on the default.</div>
+                            </details>
+                        </div>
+                        <div class="mb-4">
+                            <label for="atap-nd-smp" class="block text-gray-700 font-medium mb-1">Average SMP,
+                                7am–7pm (RM/kWh) — export credit rate</label>
+                            <input type="number" id="atap-nd-smp" min="0" step="0.0001" value="0.30"
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">SMP typically fluctuates between RM0.20–0.40/kWh. Update with the latest published rate for accuracy.</p>
+                        </div>
+                        <div class="mb-4 bg-yellow-50 border-2 border-yellow-400 rounded-md p-4">
+                            <label for="atap-nd-actual-bill" class="block text-gray-700 font-medium mb-1">💡 Actual
+                                TNB Bill Amount (RM) — <span class="text-red-600">Required</span></label>
+                            <input type="number" id="atap-nd-actual-bill" min="0" step="0.01" placeholder="e.g. 850.40" required
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <details class="field-help">
+                                <summary>Why enter this?</summary>
+                                <div class="field-help-body">We no longer show a self-calculated "final bill" —
+                                    charges like AFA and Caj Peruncitan can shift slightly month to month, so any
+                                    estimate risks being wrong. Instead, type in the client's real TNB bill amount
+                                    here — we'll use it directly to work out the true savings.</div>
+                            </details>
+                        </div>
+                        <button id="atap-nd-button" class="gradient-btn">Calculate ATAP Bill</button>
+                    </form>
+                    </div>
+                </div>
+
+                <!-- 3-Month Trend Analysis Tab -->
+                <div id="content-trend" class="tab-pane hidden">
+                    <div id="trend-inputs-wrapper" class="no-print">
+
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Choose a Tariff</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="trend-tariff-type-select" class="block text-gray-700 font-medium mb-1">Tariff
+                                    Type</label>
+                                <select id="trend-tariff-type-select"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="domestic">Domestic</option>
+                                    <option value="non-domestic">Non-Domestic</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="trend-tariff-category-select"
+                                    class="block text-gray-700 font-medium mb-1">Category</label>
+                                <select id="trend-tariff-category-select"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="general">General</option>
+                                    <option value="TOU">TOU (Time of Use)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm text-blue-900">
+                        <strong>Tip:</strong> Grab your last <strong>3 TNB bills</strong> and open the
+                        <strong>SolisCloud app's Year view</strong> for those same 3 months before you start. For
+                        each month enter: Import &amp; Export from the TNB bill, Solar Generation from the Solis
+                        app's Year view (matching each bill's month), and the AFA rate printed on that month's
+                        bill (divide the sen/kWh figure by 100).
+                    </div>
+
+                    <p class="text-sm text-gray-600 mb-4">Enter three consecutive months of data (like the columns in
+                        your usage sheet). Labels are optional — leave them blank to just show "Month 1/2/3". Each
+                        month can have its own AFA rate, since TNB's AFA changes monthly.</p>
+
+                    <!-- Domestic General Trend Form -->
+                    <form id="trend-dg-form" class="form-pane bg-blue-50 p-6 rounded-lg border border-blue-200"
+                        onsubmit="event.preventDefault(); triggerCalculation('trend-dg-button');">
+                        <h3 class="text-xl font-bold mb-4 text-blue-800">Domestic (General) — 3 Months</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full trend-input-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Metric</th>
+                                        <th>Month 1</th>
+                                        <th>Month 2</th>
+                                        <th>Month 3</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Month Label</td>
+                                        <td><input type="text" id="trend-dg-label-1" placeholder="Month 1" class="trend-input"></td>
+                                        <td><input type="text" id="trend-dg-label-2" placeholder="Month 2" class="trend-input"></td>
+                                        <td><input type="text" id="trend-dg-label-3" placeholder="Month 3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Import (kWh)<br><span class="text-xs font-normal text-gray-400">from TNB bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-import-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-import-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-import-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Solar Generation (kWh)<br><span class="text-xs font-normal text-gray-400">from Solis app (Year view)</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-solar-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-solar-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-solar-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Export (kWh)<br><span class="text-xs font-normal text-gray-400">from TNB bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-export-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-export-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-export-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Battery Charge (kWh)</td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dg-charge-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dg-charge-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dg-charge-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Battery Discharge (kWh)</td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dg-discharge-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dg-discharge-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dg-discharge-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>AFA Rate<br><span class="text-xs font-normal text-gray-400">sen/kWh ÷ 100</span></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-dg-afa-1" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-dg-afa-2" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-dg-afa-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>💡 Actual TNB Bill (RM)<br><span class="text-xs font-bold text-red-600">Required — from bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-actualbill-1" class="trend-input" placeholder="e.g. 85.40" required></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-actualbill-2" class="trend-input" placeholder="e.g. 85.40" required></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dg-actualbill-3" class="trend-input" placeholder="e.g. 85.40" required></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 -mt-2 mb-2">The Actual TNB Bill row is required for all 3 months — we use the client's real bill amounts (not an estimate) to calculate accurate savings.</p>
+                        <button id="trend-dg-button" class="gradient-btn mt-4">Analyze 3-Month Trend</button>
+                    </form>
+
+                    <!-- Domestic TOU Trend Form -->
+                    <form id="trend-dt-form" class="form-pane bg-indigo-50 p-6 rounded-lg border border-indigo-200 hidden"
+                        onsubmit="event.preventDefault(); triggerCalculation('trend-dt-button');">
+                        <h3 class="text-xl font-bold mb-4 text-indigo-800">Domestic (TOU) — 3 Months</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full trend-input-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Metric</th>
+                                        <th>Month 1</th>
+                                        <th>Month 2</th>
+                                        <th>Month 3</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Month Label</td>
+                                        <td><input type="text" id="trend-dt-label-1" placeholder="Month 1" class="trend-input"></td>
+                                        <td><input type="text" id="trend-dt-label-2" placeholder="Month 2" class="trend-input"></td>
+                                        <td><input type="text" id="trend-dt-label-3" placeholder="Month 3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Import (kWh)<br><span class="text-xs font-normal text-gray-400">from TNB bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-import-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-import-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-import-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Solar Generation (kWh)<br><span class="text-xs font-normal text-gray-400">from Solis app (Year view)</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-solar-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-solar-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-solar-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Export (kWh)<br><span class="text-xs font-normal text-gray-400">from TNB bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-export-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-export-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-export-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Battery Charge (kWh)</td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dt-charge-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dt-charge-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dt-charge-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Battery Discharge (kWh)</td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dt-discharge-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dt-discharge-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-dt-discharge-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Peak Usage % (of Import/Export)</td>
+                                        <td><input type="number" min="0" max="100" step="1" value="50" id="trend-dt-peak-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" max="100" step="1" value="50" id="trend-dt-peak-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" max="100" step="1" value="50" id="trend-dt-peak-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>AFA Rate<br><span class="text-xs font-normal text-gray-400">sen/kWh ÷ 100</span></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-dt-afa-1" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-dt-afa-2" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-dt-afa-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pelarasan Insentif<br><span class="text-xs font-normal text-gray-400">RM/kWh, from bill</span></td>
+                                        <td><input type="number" step="0.0001" value="0.01" id="trend-dt-insentif-1" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="0.01" id="trend-dt-insentif-2" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="0.01" id="trend-dt-insentif-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>💡 Actual TNB Bill (RM)<br><span class="text-xs font-bold text-red-600">Required — from bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-actualbill-1" class="trend-input" placeholder="e.g. 85.40" required></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-actualbill-2" class="trend-input" placeholder="e.g. 85.40" required></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-dt-actualbill-3" class="trend-input" placeholder="e.g. 85.40" required></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 -mt-2 mb-2">The Actual TNB Bill row is required for all 3 months — we use the client's real bill amounts (not an estimate) to calculate accurate savings.</p>
+                        <button id="trend-dt-button" class="gradient-btn mt-4">Analyze 3-Month Trend</button>
+                    </form>
+
+                    <!-- Non-Domestic Trend Form -->
+                    <form id="trend-nd-form" class="form-pane bg-purple-50 p-6 rounded-lg border border-purple-200 hidden"
+                        onsubmit="event.preventDefault(); triggerCalculation('trend-nd-button');">
+                        <h3 class="text-xl font-bold mb-4 text-purple-800">Non-Domestic — 3 Months</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full trend-input-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Metric</th>
+                                        <th>Month 1</th>
+                                        <th>Month 2</th>
+                                        <th>Month 3</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Month Label</td>
+                                        <td><input type="text" id="trend-nd-label-1" placeholder="Month 1" class="trend-input"></td>
+                                        <td><input type="text" id="trend-nd-label-2" placeholder="Month 2" class="trend-input"></td>
+                                        <td><input type="text" id="trend-nd-label-3" placeholder="Month 3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Import (kWh)<br><span class="text-xs font-normal text-gray-400">from TNB bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-import-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-import-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-import-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Solar Generation (kWh)<br><span class="text-xs font-normal text-gray-400">from Solis app (Year view)</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-solar-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-solar-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-solar-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Export (kWh)<br><span class="text-xs font-normal text-gray-400">from TNB bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-export-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-export-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-export-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Battery Charge (kWh)</td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-nd-charge-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-nd-charge-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" value="0" id="trend-nd-charge-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr id="trend-nd-demand-row" class="hidden">
+                                        <td>Max Demand (kW)</td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-demand-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-demand-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-demand-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr id="trend-nd-peak-row" class="hidden">
+                                        <td>Peak Usage % (of Import)</td>
+                                        <td><input type="number" min="0" max="100" step="1" value="50" id="trend-nd-peak-1" class="trend-input"></td>
+                                        <td><input type="number" min="0" max="100" step="1" value="50" id="trend-nd-peak-2" class="trend-input"></td>
+                                        <td><input type="number" min="0" max="100" step="1" value="50" id="trend-nd-peak-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>AFA Rate<br><span class="text-xs font-normal text-gray-400">sen/kWh ÷ 100</span></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-nd-afa-1" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-nd-afa-2" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="-0.0145" id="trend-nd-afa-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr id="trend-nd-insentif-row" class="hidden">
+                                        <td>Pelarasan Insentif<br><span class="text-xs font-normal text-gray-400">RM/kWh, from bill</span></td>
+                                        <td><input type="number" step="0.0001" value="0.01" id="trend-nd-insentif-1" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="0.01" id="trend-nd-insentif-2" class="trend-input"></td>
+                                        <td><input type="number" step="0.0001" value="0.01" id="trend-nd-insentif-3" class="trend-input"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>💡 Actual TNB Bill (RM)<br><span class="text-xs font-bold text-red-600">Required — from bill</span></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-actualbill-1" class="trend-input" placeholder="e.g. 850.40" required></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-actualbill-2" class="trend-input" placeholder="e.g. 850.40" required></td>
+                                        <td><input type="number" min="0" step="0.01" id="trend-nd-actualbill-3" class="trend-input" placeholder="e.g. 850.40" required></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 -mt-2 mb-2">The Actual TNB Bill row is required for all 3 months — we use the client's real bill amounts (not an estimate) to calculate accurate savings.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 max-w-xl">
+                            <div class="mb-4">
+                                <label for="trend-nd-smp" class="block text-gray-700 font-medium mb-1">Average SMP,
+                                    7am–7pm (RM/kWh)</label>
+                                <input type="number" id="trend-nd-smp" min="0" step="0.0001" value="0.30"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        <button id="trend-nd-button" class="gradient-btn">Analyze 3-Month Trend</button>
+                    </form>
+                    </div>
+
+                    <!-- Trend Results Section -->
+                    <div id="trend-results-section" class="mt-8 hidden">
+                        <div id="trend-print-area">
+                        <div id="trend-print-letterhead" class="print-only print-letterhead">
+                            <div class="eyebrow">Solar ATAP · 3-Month Analysis</div>
+                            <h1>3-Month ATAP Trend Report</h1>
+                            <div class="subtitle" id="trend-print-subtitle">Solar bill trend under the ATAP scheme</div>
+                            <div class="meta">
+                                <span id="trend-print-client-meta"></span>
+                                <span>Generated: <strong id="trend-print-date"></strong></span>
+                            </div>
+                        </div>
+                        <div id="trend-print-client" class="mb-3 text-gray-700 font-medium hidden no-print"></div>
+                        <div id="trend-print-summary" class="print-only print-summary-cards"></div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 no-print">3-Month Trend Results</h2>
+                        <div id="trend-result-message" class="p-4 rounded-md font-medium"></div>
+
+                        <div id="trend-headline-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 no-print"></div>
+
+                        <div class="bg-white rounded-lg shadow p-4 mt-4 border border-gray-200">
+                            <canvas id="trend-chart" height="110"></canvas>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow overflow-x-auto mt-4 border border-gray-200">
+                            <table class="min-w-full divide-y divide-gray-200 results-table" id="trend-results-table">
+                                <thead>
+                                    <tr id="trend-results-header"></tr>
+                                </thead>
+                                <tbody id="trend-results-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+
+                        <div id="trend-conclusion"
+                            class="bg-white rounded-lg shadow p-6 mt-4 border border-gray-200 leading-relaxed text-gray-800">
+                        </div>
+
+                        <div class="print-only print-footer">
+                            Prepared using the Solar ATAP Bill Calculator · Figures are estimates based on published TNB tariff rates and the data entered, and are not an official TNB bill.
+                        </div>
+                        </div>
+
+                        <button id="print-trend-btn" type="button"
+                            class="no-print gradient-btn mt-4">🖨️ Print / Save as PDF</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="mt-8 hidden">
+                <div id="calc-print-area">
+                <div id="calc-print-letterhead" class="print-only print-letterhead">
+                    <div class="eyebrow">Solar ATAP · Bill Estimate</div>
+                    <h1>Solar ATAP Bill Report</h1>
+                    <div class="subtitle" id="calc-print-subtitle">Estimated TNB bill under the ATAP scheme</div>
+                    <div class="meta">
+                        <span id="calc-print-client-meta"></span>
+                        <span>Generated: <strong id="calc-print-date"></strong></span>
+                    </div>
+                </div>
+                <div id="calc-print-client" class="mb-3 text-gray-700 font-medium hidden no-print"></div>
+                <div id="calc-print-summary" class="print-only print-summary-cards"></div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 no-print">Calculation Results</h2>
+                <div id="result-message" class="p-4 rounded-md font-medium"></div>
+
+                <div id="calc-savings-hero" class="no-print"></div>
+
+                <div id="calc-headline-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 no-print"></div>
+
+                <div class="bg-white rounded-lg shadow overflow-hidden mt-4 border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 results-table">
+                        <tbody id="results-body" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="result-explanation"></div>
+                <div class="print-only print-footer">
+                    Prepared using the Solar ATAP Bill Calculator · Figures are estimates based on published TNB tariff rates and the data entered, and are not an official TNB bill.
+                </div>
+                </div>
+                <button id="print-calc-btn" type="button"
+                    class="no-print gradient-btn mt-4">🖨️ Print / Save as PDF</button>
+            </div>
+
+            <!-- Modal for general alerts (e.g., input validation) -->
+            <div id="alert-modal"
+                class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+                <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                    <div class="mt-3 text-center">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Input Error</h3>
+                        <div class="mt-2 px-7 py-3">
+                            <p id="alert-message" class="text-sm text-gray-500"></p>
+                        </div>
+                        <div class="items-center px-4 py-3">
+                            <button id="alert-close-btn"
+                                class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Custom Modal for Random & Time Bomb Events -->
+    <div id="event-modal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300 opacity-0">
+        <div
+            class="relative top-20 mx-auto p-8 border w-96 shadow-2xl rounded-xl bg-white text-center transform scale-95 transition-transform duration-300">
+            <div id="event-content" class="mt-3">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global Variables ---
+        let calculationCount = 0;
+        const MAX_CALCULATIONS_BEFORE_CHECK = 20;
+
+        // --- DATA AND RATES ---
+        const TNB_DOMESTRIC_RATES = {
+            'low_general': { 'energy': 0.2703, 'capacity': 0.0455, 'network': 0.1285, 'retail': 10.00 },
+            'high_general': { 'energy': 0.3703, 'capacity': 0.0455, 'network': 0.1285, 'retail': 10.00 },
+            'low_TOU': { 'peak': 0.2852, 'off_peak': 0.2443, 'capacity': 0.0455, 'network': 0.1285, 'retail': 10.00 },
+            'high_TOU': { 'peak': 0.3852, 'off_peak': 0.3443, 'capacity': 0.0455, 'network': 0.1285, 'retail': 10.00 }
+        };
+
+        const TNB_Non_Domestic_RATES = {
+            'low_General': { 'energy': 0.2703, 'capacity': 0.0883, 'network': 0.1482, 'retail': 20.00 },
+            'low_TOU': { 'peak': 0.2852, 'off_peak': 0.2443, 'capacity': 0.0883, 'network': 0.1482, 'retail': 20.00 },
+            'medium_General': { 'energy': 0.2983, 'capacity': 29.43, 'network': 59.84, 'retail': 200.00 },
+            'medium_TOU': { 'peak': 0.3132, 'off_peak': 0.2723, 'capacity': 30.19, 'network': 66.87, 'retail': 200.00 },
+            'high_General': { 'energy': 0.4303, 'capacity': 16.68, 'network': 14.53, 'retail': 250.00 },
+            'high_TOU': { 'peak': 0.4452, 'off_peak': 0.4043, 'capacity': 21.76, 'network': 23.06, 'retail': 250.00 }
+        };
+
+        // Average kWh generated per kWp of installed PV per month, by area — used
+        // to calculate the "Average 12-Month Solar Generation" reference figure.
+        const AREA_FACTORS = {
+            'Johor Bahru': 96,
+            'Austin/Tebrau/Setia Tropika': 93,
+            'Kluang/Batu Pahat': 99,
+            'Muar/Malacca': 106.5,
+            'KL/Selangor': 99
+        };
+
+        const DomesticCategoryOptions = { general: "General", TOU: "TOU (Time of Use)" };
+        const NonDomesticCategoryOptions = {
+            low_General: "Low General", low_TOU: "Low TOU",
+            medium_General: "Medium General", medium_TOU: "Medium TOU",
+            high_General: "High General", high_TOU: "High TOU"
+        };
+
+        // --- Helper Functions ---
+        function round(value, decimals) {
+            return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
+        }
+
+        function showAlert(message) {
+            document.getElementById('alert-message').innerText = message;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            toast.innerText = message;
+            toast.classList.add('toast-show');
+            setTimeout(() => { toast.classList.remove('toast-show'); }, 2000);
+        }
+
+        function triggerCalculation(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.classList.add('calculate-button-animate');
+                processCalculation(buttonId);
+                setTimeout(() => { button.classList.remove('calculate-button-animate'); }, 300);
+            }
+        }
+
+        function showEventModal(contentHtml, durationMs, callback) {
+            const modal = document.getElementById('event-modal');
+            const content = document.getElementById('event-content');
+            const modalInner = modal.querySelector('.relative');
+            content.innerHTML = contentHtml;
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            modal.classList.add('event-show');
+            modalInner.classList.remove('scale-95');
+            setTimeout(() => {
+                modalInner.classList.add('scale-95');
+                modal.classList.remove('event-show');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    if (callback) callback();
+                }, 300);
+            }, durationMs);
+        }
+
+        function checkRandomRoll(nextStep) {
+            calculationCount++;
+            if (calculationCount >= MAX_CALCULATIONS_BEFORE_CHECK) {
+                const roll = Math.floor(Math.random() * 10);
+                const triggerNumbers = [2, 3, 6, 9];
+                if (triggerNumbers.includes(roll)) {
+                    const coffeeHtml = `
+                        <h3 class="text-2xl font-bold text-gray-800 mb-4">Random Break </h3>
+                        <p class="text-lg text-red-600 mb-4 font-semibold">I tired already, rest a while then calculate for you.</p>
+                        <div class="text-5xl my-4">☕😴</div>
+                        <p class="text-sm text-gray-500">Resuming calculation in 5 seconds...</p>
+                    `;
+                    showEventModal(coffeeHtml, 5000, nextStep);
+                    calculationCount = 0;
+                    return true;
+                } else {
+                    calculationCount = 0;
+                }
+            }
+            return false;
+        }
+
+        function checkTimeBomb(nextStep) {
+            const now = new Date();
+            const minutes = now.getMinutes();
+            if (minutes === 30 && now.getSeconds() < 10) {
+                const timeBombHtml = `
+                    <h3 class="text-2xl font-bold text-red-600 mb-4">💣 Time Bomb Alert!</h3>
+                    <p class="text-lg text-gray-700 mb-4">It's ${now.toLocaleTimeString()}! Calculating is forbidden right now.</p>
+                    <div class="text-5xl my-4">⏱️</div>
+                    <p class="text-sm text-gray-500">Calculation will proceed in 10 seconds...</p>
+                `;
+                showEventModal(timeBombHtml, 10000, nextStep);
+                return true;
+            }
+            return false;
+        }
+
+        function processCalculation(buttonId) {
+            const actualCalculation = () => {
+                switch (buttonId) {
+                    case 'atap-dg-button':
+                        document.getElementById('atap-dg-button').dispatchEvent(new Event('calculate_atap_dg', { bubbles: true }));
+                        break;
+                    case 'atap-dt-button':
+                        document.getElementById('atap-dt-button').dispatchEvent(new Event('calculate_atap_dt', { bubbles: true }));
+                        break;
+                    case 'atap-nd-button':
+                        document.getElementById('atap-nd-button').dispatchEvent(new Event('calculate_atap_nd', { bubbles: true }));
+                        break;
+                    case 'trend-dg-button':
+                        document.getElementById('trend-dg-button').dispatchEvent(new Event('calculate_trend_dg', { bubbles: true }));
+                        break;
+                    case 'trend-dt-button':
+                        document.getElementById('trend-dt-button').dispatchEvent(new Event('calculate_trend_dt', { bubbles: true }));
+                        break;
+                    case 'trend-nd-button':
+                        document.getElementById('trend-nd-button').dispatchEvent(new Event('calculate_trend_nd', { bubbles: true }));
+                        break;
+                }
+            };
+            if (checkTimeBomb(actualCalculation)) return;
+            if (checkRandomRoll(actualCalculation)) return;
+            actualCalculation();
+        }
+
+        // --- EEI REBATE FUNCTIONS (unchanged from TNB tariff structure) ---
+        function calculate_eei_domestic(total_kwh) {
+            if (total_kwh > 1000) return 0.0;
+            const slabs = [
+                [1, 200, 25.0], [201, 250, 24.5], [251, 300, 22.5],
+                [301, 350, 21.0], [351, 400, 17.0], [401, 450, 14.5],
+                [451, 500, 12.0], [501, 550, 10.5], [551, 600, 9.0],
+                [601, 650, 7.5], [651, 700, 5.5], [701, 750, 4.5],
+                [751, 800, 4.0], [801, 850, 2.5], [851, 900, 1.0],
+                [901, 1000, 0.5],
+            ];
+            for (const [lower, upper, rate_sen] of slabs) {
+                if (total_kwh >= lower && total_kwh <= upper) {
+                    return round(total_kwh * (rate_sen / 100), 2);
+                }
+            }
+            return 0.0;
+        }
+
+        function calculate_eei_non_domestic(total_kwh) {
+            return total_kwh <= 200 ? 0.11 : 0;
+        }
+
+        // --- BILL DETAIL FUNCTIONS (expose Energy Charge component for ATAP credit capping) ---
+        function calculate_bill_details_domestic_general(total_usage, afa_input) {
+            const rates = total_usage <= 1500 ? TNB_DOMESTRIC_RATES['low_general'] : TNB_DOMESTRIC_RATES['high_general'];
+            const non_taxable_kwh = Math.min(total_usage, 600);
+            const taxable_kwh = Math.max(0, total_usage - 600);
+            const eei_rebate = calculate_eei_domestic(total_usage);
+            const afa = round(total_usage * afa_input, 2);
+
+            const ratio_nt = total_usage > 0 ? non_taxable_kwh / total_usage : 0;
+            const ratio_t = total_usage > 0 ? taxable_kwh / total_usage : 0;
+
+            const eei_rebate_non_tax = round(eei_rebate * ratio_nt, 2);
+            const eei_rebate_tax = round(eei_rebate * ratio_t, 2);
+            const afa_non_tax = round(afa * ratio_nt, 2);
+            const afa_tax = round(afa * ratio_t, 2);
+
+            const nt_energy = round(non_taxable_kwh * rates['energy'], 2);
+            const nt_capacity = round(non_taxable_kwh * rates['capacity'], 2);
+            const nt_network = round(non_taxable_kwh * rates['network'], 2);
+            const nt_retail = 0;
+            const nt_net_subtotal = round(nt_energy + nt_capacity + nt_network + nt_retail - eei_rebate_non_tax, 2);
+            const nt_subtotal = round(nt_net_subtotal + afa_non_tax, 2);
+
+            const t_energy = round(taxable_kwh * rates['energy'], 2);
+            const t_capacity = round(taxable_kwh * rates['capacity'], 2);
+            const t_network = round(taxable_kwh * rates['network'], 2);
+            const t_retail = rates['retail'];
+            const t_net_subtotal = round(t_energy + t_capacity + t_network + t_retail - eei_rebate_tax, 2);
+            const t_subtotal = round(t_net_subtotal + afa_tax, 2);
+
+            const subtotal = round(nt_subtotal + t_subtotal, 2);
+            const service_tax = round(t_subtotal * 0.08, 2);
+            const kwtbb = round((subtotal - t_retail - afa) * 0.016, 2);
+            const total_bill = round(subtotal + service_tax + kwtbb, 2);
+
+            return {
+                usage: round(total_usage, 2),
+                energy_charge: round(nt_energy + t_energy, 2),
+                capacity_charge: round(nt_capacity + t_capacity, 2),
+                network_charge: round(nt_network + t_network, 2),
+                retail_charge: t_retail,
+                eei_rebate: round(eei_rebate, 2),
+                afa_total: afa,
+                subtotal: subtotal,
+                service_tax: service_tax,
+                kwtbb: kwtbb,
+                total_bill: total_bill,
+                energy_rate: rates['energy']
+            };
+        }
+
+        function calculate_bill_details_domestic_tou(total_usage, peak_percent, afa_input) {
+            const rates = total_usage <= 1500 ? TNB_DOMESTRIC_RATES['low_TOU'] : TNB_DOMESTRIC_RATES['high_TOU'];
+            const peak_usage = round(total_usage * (peak_percent / 100), 2);
+            const off_peak_usage = round(total_usage - peak_usage, 2);
+
+            const non_taxable_kwh = Math.min(total_usage, 600);
+            const taxable_kwh = Math.max(0, total_usage - 600);
+            const eei_rebate = calculate_eei_domestic(total_usage);
+            const afa = round(total_usage * afa_input, 2);
+
+            const nt_peak = Math.min(non_taxable_kwh, peak_usage);
+            const remaining_nt_quota = round(non_taxable_kwh - nt_peak, 2);
+            const nt_off_peak = Math.min(remaining_nt_quota, off_peak_usage);
+            const t_peak = round(peak_usage - nt_peak, 2);
+            const t_off_peak = round(off_peak_usage - nt_off_peak, 2);
+
+            const usage_ratio = total_usage > 0 ? (non_taxable_kwh / total_usage) : 0;
+            const taxable_ratio = total_usage > 0 ? (taxable_kwh / total_usage) : 0;
+
+            const eei_nt = round(eei_rebate * usage_ratio, 2);
+            const eei_t = round(eei_rebate * taxable_ratio, 2);
+            const afa_nt = round(afa * usage_ratio, 2);
+            const afa_t = round(afa * taxable_ratio, 2);
+
+            const nt_energy_peak = round(nt_peak * rates['peak'], 2);
+            const nt_energy_off_peak = round(nt_off_peak * rates['off_peak'], 2);
+            const nt_capacity = round(non_taxable_kwh * rates['capacity'], 2);
+            const nt_network = round(non_taxable_kwh * rates['network'], 2);
+            const nt_retail = 0;
+            const nt_net_subtotal = round(nt_energy_peak + nt_energy_off_peak + nt_capacity + nt_network + nt_retail - eei_nt, 2);
+            const nt_subtotal = round(nt_net_subtotal + afa_nt, 2);
+
+            const t_energy_peak = round(t_peak * rates['peak'], 2);
+            const t_energy_off_peak = round(t_off_peak * rates['off_peak'], 2);
+            const t_capacity = round(taxable_kwh * rates['capacity'], 2);
+            const t_network = round(taxable_kwh * rates['network'], 2);
+            const t_retail = rates['retail'];
+            const t_net_subtotal = round(t_energy_peak + t_energy_off_peak + t_capacity + t_network + t_retail - eei_t, 2);
+            const t_subtotal = round(t_net_subtotal + afa_t, 2);
+
+            const energy_peak_total = round(peak_usage * rates['peak'], 2);
+            const energy_off_peak_total = round(off_peak_usage * rates['off_peak'], 2);
+            const capacity_total = round(total_usage * rates['capacity'], 2);
+            const network_total = round(total_usage * rates['network'], 2);
+            const retail = rates['retail'];
+
+            const net_subtotal = round(energy_peak_total + energy_off_peak_total + capacity_total + network_total + retail - eei_rebate, 2);
+            const subtotal = round(net_subtotal + afa, 2);
+            const service_tax = round(t_subtotal * 0.08, 2);
+            const kwtbb = round((net_subtotal - retail) * 0.016, 2);
+            const total_bill = round(subtotal + service_tax + kwtbb, 2);
+
+            return {
+                usage: round(total_usage, 2),
+                peak_usage: peak_usage,
+                off_peak_usage: off_peak_usage,
+                energy_charge: round(energy_peak_total + energy_off_peak_total, 2),
+                capacity_charge: capacity_total,
+                network_charge: network_total,
+                retail_charge: retail,
+                eei_rebate: round(eei_rebate, 2),
+                afa_total: afa,
+                subtotal: subtotal,
+                service_tax: service_tax,
+                kwtbb: kwtbb,
+                total_bill: total_bill,
+                rates: rates
+            };
+        }
+
+        function calculate_bill_from_usage_nd_general(tariff_category, total_usage, max_demand, afa_input) {
+            const rates = TNB_Non_Domestic_RATES[tariff_category];
+            const afa = round(total_usage * afa_input, 2);
+            const eei_rebate_rate = calculate_eei_non_domestic(total_usage);
+
+            const energy = round(total_usage * rates['energy'], 2);
+            let capacity, network;
+            if (['medium_General', 'high_General'].includes(tariff_category)) {
+                capacity = round(max_demand * rates['capacity'], 2);
+                network = round(max_demand * rates['network'], 2);
+            } else {
+                capacity = round(total_usage * rates['capacity'], 2);
+                network = round(total_usage * rates['network'], 2);
+            }
+            const retail = rates['retail'];
+            const eei_rebate = round(total_usage * eei_rebate_rate, 2);
+
+            const net_subtotal = round(energy + capacity + network + retail - eei_rebate, 2);
+            const subtotal = round(net_subtotal + afa, 2);
+            const kwtbb = round((net_subtotal - retail) * 0.016, 2);
+            const total_bill = round(subtotal + kwtbb, 2);
+
+            return {
+                'Tariff Category': tariff_category,
+                'Total Usage (kWh)': round(total_usage, 2),
+                'Max Demand (kW)': round(max_demand, 2),
+                'Energy Charge': energy,
+                'Capacity Charge': capacity,
+                'Network Charge': network,
+                'Retail Charge': retail,
+                'EEI Rebate': eei_rebate,
+                'AFA Total': afa,
+                'Subtotal Before Tax': net_subtotal,
+                'Subtotal After AFA': subtotal,
+                'KWTBB': kwtbb,
+                'Total Bill (RM)': round(total_bill, 2),
+            };
+        }
+
+        function calculate_bill_from_usage_nd_tou(tariff_category, total_usage, max_demand, peak_percent, afa_input) {
+            const rates = TNB_Non_Domestic_RATES[tariff_category];
+            const peak_usage = total_usage * (peak_percent / 100);
+            const off_peak_usage = total_usage - peak_usage;
+            const afa = round(total_usage * afa_input, 2);
+            const eei_rebate_rate = calculate_eei_non_domestic(total_usage);
+
+            const energy_peak = round(peak_usage * rates['peak'], 2);
+            const energy_off_peak = round(off_peak_usage * rates['off_peak'], 2);
+            let capacity, network;
+            if (['medium_TOU', 'high_TOU'].includes(tariff_category)) {
+                capacity = round(max_demand * rates['capacity'], 2);
+                network = round(max_demand * rates['network'], 2);
+            } else {
+                capacity = round(total_usage * rates['capacity'], 2);
+                network = round(total_usage * rates['network'], 2);
+            }
+            const retail = rates['retail'];
+            const eei_rebate = round(total_usage * eei_rebate_rate, 2);
+
+            const net_subtotal = round(energy_peak + energy_off_peak + capacity + network + retail - eei_rebate, 2);
+            const subtotal = round(net_subtotal + afa, 2);
+            const kwtbb = round((net_subtotal - retail) * 0.016, 2);
+            const total_bill = round(subtotal + kwtbb, 2);
+
+            return {
+                'Tariff Category': tariff_category,
+                'Total Usage (kWh)': round(total_usage, 2),
+                'Peak Usage (kWh)': round(peak_usage, 2),
+                'Off-Peak Usage (kWh)': round(off_peak_usage, 2),
+                'Max Demand (kW)': round(max_demand, 2),
+                'Energy Peak Charge': energy_peak,
+                'Energy Off-Peak Charge': energy_off_peak,
+                'Capacity Charge': capacity,
+                'Network Charge': network,
+                'Retail Charge': retail,
+                'EEI Rebate': eei_rebate,
+                'AFA Total': afa,
+                'Subtotal Before Tax': net_subtotal,
+                'Subtotal After AFA': subtotal,
+                'KWTBB': kwtbb,
+                'Total Bill (RM)': round(total_bill, 2),
+            };
+        }
+
+        // --- ATAP ORCHESTRATION LOGIC ---
+        // ATAP rules used here (per SEDA/TNB Solar ATAP guidance):
+        //  - Self-consumption (PV to Load, incl. via battery) never touches the grid at all.
+        //  - The bill is calculated on Import (kWh) actually drawn from the grid.
+        //  - Export credits are NOT netted 1:1 like old NEM. They offset ONLY the
+        //    Energy Charge component of the bill, are capped at that amount, cannot
+        //    reduce AFA/Capacity/Network/Retail/Tax/KWTBB, and do NOT roll over.
+        //  - Domestic credit rate = the applicable tariff energy rate (or peak/off-peak
+        //    blended rate for TOU). Non-domestic credit rate = Average SMP (7am-7pm).
+        //  - Pelarasan Insentif (TOU accounts only) is a separate per-kWh incentive
+        //    adjustment printed on the client's own TNB bill. It is applied AFTER the
+        //    ATAP bill is calculated, on top of Import (kWh), to arrive at the client's
+        //    real, final payable bill.
+        //  - The figures produced here ('Final ATAP Bill' / 'Real ATAP Bill After
+        //    Insentif') are ESTIMATES. The client's own real TNB bill amount, entered
+        //    by the user, always takes priority over these estimates — see
+        //    applyActualBillOverride(), which is called by every calculate_* button
+        //    handler below and replaces the estimate with the user-entered figure for
+        //    both display and the savings calculation.
+
+        function calculate_atap_domestic_general(import_kwh, solar_gen, export_kwh, charge_kwh, discharge_kwh, afa_input) {
+            const pv_to_load_battery = round(solar_gen - export_kwh, 2);
+            const pv_to_load = round(pv_to_load_battery - charge_kwh, 2);
+            const total_consumption = round(import_kwh + discharge_kwh + pv_to_load, 2);
+
+            const billWithoutSolar = calculate_bill_details_domestic_general(total_consumption, afa_input);
+            const gridBill = calculate_bill_details_domestic_general(import_kwh, afa_input);
+
+            const exportCreditRaw = round(export_kwh * gridBill.energy_rate, 2);
+            const exportCreditApplied = round(Math.min(exportCreditRaw, gridBill.energy_charge, gridBill.total_bill), 2);
+            const finalBill = Math.max(0, round(gridBill.total_bill - exportCreditApplied, 2));
+            const savings = round(billWithoutSolar.total_bill - finalBill, 2);
+
+            const dayRatio = total_consumption > 0 ? round((pv_to_load / total_consumption) * 100, 2) : 0;
+            const nightRatio = total_consumption > 0 ? round(((import_kwh + discharge_kwh) / total_consumption) * 100, 2) : 0;
+
+            return {
+                'Tariff Category': 'Domestic General (ATAP)',
+                'PV to Load + Battery (kWh)': pv_to_load_battery,
+                'Battery Charge (kWh)': round(charge_kwh, 2),
+                'Battery Discharge (kWh)': round(discharge_kwh, 2),
+                'PV to Load Consumption (kWh)': pv_to_load,
+                'Total Consumption (kWh)': total_consumption,
+                'Day-time Consumption Ratio (%)': dayRatio,
+                'Night-time Consumption Ratio (%)': nightRatio,
+                'Bill Without Solar (RM)': billWithoutSolar.total_bill,
+                'Grid Import Bill Before Credit (RM)': gridBill.total_bill,
+                'Energy Charge Component (RM)': gridBill.energy_charge,
+                'Export Credit Applied (RM)': exportCreditApplied,
+                'Final ATAP Bill (RM)': finalBill,
+                'Estimated Monthly Savings (RM)': savings,
+                '_creditCapped': exportCreditRaw > exportCreditApplied + 0.005,
+                '_exportCreditRaw': exportCreditRaw,
+            };
+        }
+
+        function calculate_atap_domestic_tou(import_kwh, solar_gen, export_kwh, charge_kwh, discharge_kwh, peak_percent, afa_input, insentif_input) {
+            const pv_to_load_battery = round(solar_gen - export_kwh, 2);
+            const pv_to_load = round(pv_to_load_battery - charge_kwh, 2);
+            const total_consumption = round(import_kwh + discharge_kwh + pv_to_load, 2);
+
+            const billWithoutSolar = calculate_bill_details_domestic_tou(total_consumption, peak_percent, afa_input);
+            const gridBill = calculate_bill_details_domestic_tou(import_kwh, peak_percent, afa_input);
+
+            const export_peak = round(export_kwh * (peak_percent / 100), 2);
+            const export_off_peak = round(export_kwh - export_peak, 2);
+            const exportCreditRaw = round(export_peak * gridBill.rates['peak'] + export_off_peak * gridBill.rates['off_peak'], 2);
+            const exportCreditApplied = round(Math.min(exportCreditRaw, gridBill.energy_charge, gridBill.total_bill), 2);
+            const finalBill = Math.max(0, round(gridBill.total_bill - exportCreditApplied, 2));
+            const savings = round(billWithoutSolar.total_bill - finalBill, 2);
+
+            const insentifRate = insentif_input || 0;
+            const insentifAdjustment = round(import_kwh * insentifRate, 2);
+            const realBill = round(finalBill + insentifAdjustment, 2);
+
+            const dayRatio = total_consumption > 0 ? round((pv_to_load / total_consumption) * 100, 2) : 0;
+            const nightRatio = total_consumption > 0 ? round(((import_kwh + discharge_kwh) / total_consumption) * 100, 2) : 0;
+
+            return {
+                'Tariff Category': 'Domestic TOU (ATAP)',
+                'Import Peak Usage (kWh)': gridBill.peak_usage,
+                'Import Off-Peak Usage (kWh)': gridBill.off_peak_usage,
+                'PV to Load + Battery (kWh)': pv_to_load_battery,
+                'Battery Charge (kWh)': round(charge_kwh, 2),
+                'Battery Discharge (kWh)': round(discharge_kwh, 2),
+                'PV to Load Consumption (kWh)': pv_to_load,
+                'Total Consumption (kWh)': total_consumption,
+                'Day-time Consumption Ratio (%)': dayRatio,
+                'Night-time Consumption Ratio (%)': nightRatio,
+                'Bill Without Solar (RM)': billWithoutSolar.total_bill,
+                'Grid Import Bill Before Credit (RM)': gridBill.total_bill,
+                'Energy Charge Component (RM)': gridBill.energy_charge,
+                'Export Credit Applied (RM)': exportCreditApplied,
+                'Final ATAP Bill (RM)': finalBill,
+                'Pelarasan Insentif Adjustment (RM)': insentifAdjustment,
+                'Real ATAP Bill After Insentif (RM)': realBill,
+                'Estimated Monthly Savings (RM)': savings,
+                '_creditCapped': exportCreditRaw > exportCreditApplied + 0.005,
+                '_exportCreditRaw': exportCreditRaw,
+            };
+        }
+
+        function calculate_atap_nd(tariff_category, import_kwh, solar_gen, export_kwh, charge_kwh, discharge_kwh, max_demand, peak_percent, smp_rate, afa_input, insentif_input) {
+            const pv_to_load_battery = round(solar_gen - export_kwh, 2);
+            const pv_to_load = round(pv_to_load_battery - charge_kwh, 2);
+            const total_consumption = round(import_kwh + discharge_kwh + pv_to_load, 2);
+
+            const isTOU = tariff_category.endsWith('TOU');
+            const billWithoutSolar = isTOU ?
+                calculate_bill_from_usage_nd_tou(tariff_category, total_consumption, max_demand, peak_percent, afa_input) :
+                calculate_bill_from_usage_nd_general(tariff_category, total_consumption, max_demand, afa_input);
+            const gridBill = isTOU ?
+                calculate_bill_from_usage_nd_tou(tariff_category, import_kwh, max_demand, peak_percent, afa_input) :
+                calculate_bill_from_usage_nd_general(tariff_category, import_kwh, max_demand, afa_input);
+
+            const energyCharge = isTOU ?
+                round(gridBill['Energy Peak Charge'] + gridBill['Energy Off-Peak Charge'], 2) :
+                gridBill['Energy Charge'];
+
+            const exportCreditRaw = round(export_kwh * smp_rate, 2);
+            const exportCreditApplied = round(Math.min(exportCreditRaw, energyCharge, gridBill['Total Bill (RM)']), 2);
+            const finalBill = Math.max(0, round(gridBill['Total Bill (RM)'] - exportCreditApplied, 2));
+            const savings = round(billWithoutSolar['Total Bill (RM)'] - finalBill, 2);
+
+            const dayRatio = total_consumption > 0 ? round((pv_to_load / total_consumption) * 100, 2) : 0;
+            const nightRatio = total_consumption > 0 ? round(((import_kwh + discharge_kwh) / total_consumption) * 100, 2) : 0;
+
+            const result = {
+                'Tariff Category': tariff_category + ' (ATAP)',
+            };
+            if (isTOU) {
+                result['Import Peak Usage (kWh)'] = gridBill['Peak Usage (kWh)'];
+                result['Import Off-Peak Usage (kWh)'] = gridBill['Off-Peak Usage (kWh)'];
+            }
+            result['PV to Load + Battery (kWh)'] = pv_to_load_battery;
+            result['Battery Charge (kWh)'] = round(charge_kwh, 2);
+            result['Battery Discharge (kWh)'] = round(discharge_kwh, 2);
+            result['PV to Load Consumption (kWh)'] = pv_to_load;
+            result['Total Consumption (kWh)'] = total_consumption;
+            result['Day-time Consumption Ratio (%)'] = dayRatio;
+            result['Night-time Consumption Ratio (%)'] = nightRatio;
+            result['Bill Without Solar (RM)'] = billWithoutSolar['Total Bill (RM)'];
+            result['Grid Import Bill Before Credit (RM)'] = gridBill['Total Bill (RM)'];
+            result['Energy Charge Component (RM)'] = energyCharge;
+            result['Export Credit Applied (RM)'] = exportCreditApplied;
+            result['Final ATAP Bill (RM)'] = finalBill;
+            if (isTOU) {
+                const insentifRate = insentif_input || 0;
+                const insentifAdjustment = round(import_kwh * insentifRate, 2);
+                const realBill = round(finalBill + insentifAdjustment, 2);
+                result['Pelarasan Insentif Adjustment (RM)'] = insentifAdjustment;
+                result['Real ATAP Bill After Insentif (RM)'] = realBill;
+            }
+            result['Estimated Monthly Savings (RM)'] = savings;
+            result['_creditCapped'] = exportCreditRaw > exportCreditApplied + 0.005;
+            result['_exportCreditRaw'] = exportCreditRaw;
+            return result;
+        }
+
+        // --- UI INTERACTION LOGIC ---
+        const forms = document.querySelectorAll('#content-calculate form.form-pane');
+
+        const ndDemandGroup = document.getElementById('atap-nd-demand-group');
+        const ndPeakGroup = document.getElementById('atap-nd-peak-group');
+        const ndInsentifGroup = document.getElementById('atap-nd-insentif-group');
+        const ndPeakValue = document.getElementById('atap-nd-peak-value');
+        const dtPeakValue = document.getElementById('atap-dt-peak-value');
+
+        const resultsSection = document.getElementById('results-section');
+        const resultsBody = document.getElementById('results-body');
+        const resultMessage = document.getElementById('result-message');
+        const alertModal = document.getElementById('alert-modal');
+
+        const calcTariffTypeSelect = document.getElementById('calc-tariff-type-select');
+        const calcTariffCategorySelect = document.getElementById('calc-tariff-category-select');
+
+        function updateCategoryOptions(tariffType) {
+            calcTariffCategorySelect.innerHTML = '';
+            const options = tariffType === 'domestic' ? DomesticCategoryOptions : NonDomesticCategoryOptions;
+            for (const key in options) {
+                if (options.hasOwnProperty(key)) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = options[key];
+                    calcTariffCategorySelect.appendChild(option);
+                }
+            }
+        }
+
+        function updateFormVisibility(tariffType, category) {
+            forms.forEach(form => form.classList.add('hidden'));
+            ndDemandGroup.classList.add('hidden');
+            ndPeakGroup.classList.add('hidden');
+            ndInsentifGroup.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+
+            let targetForm;
+            if (tariffType === 'domestic') {
+                targetForm = category === 'general' ?
+                    document.getElementById('atap-dg-form') :
+                    document.getElementById('atap-dt-form');
+            } else {
+                targetForm = document.getElementById('atap-nd-form');
+                if (category.includes('TOU')) {
+                    ndPeakGroup.classList.remove('hidden');
+                    ndInsentifGroup.classList.remove('hidden');
+                }
+                if (['medium_General', 'medium_TOU', 'high_General', 'high_TOU'].includes(category)) {
+                    ndDemandGroup.classList.remove('hidden');
+                }
+            }
+
+            if (targetForm) {
+                targetForm.classList.remove('hidden');
+                const firstInput = targetForm.querySelector('input[type="number"]');
+                if (firstInput) firstInput.focus();
+            }
+        }
+
+        // Returns PV Capacity / Area / reference generation as display-ready strings, or null.
+        function getSystemInfoData() {
+            const pvCapacityInput = document.getElementById('sys-pv-capacity').value;
+            const pvCapacity = parseFloat(pvCapacityInput);
+            const area = document.getElementById('sys-area-select').value;
+            if (pvCapacity && pvCapacity > 0) {
+                const factor = AREA_FACTORS[area];
+                const refGen = round(pvCapacity * factor, 2);
+                return {
+                    'PV Capacity': `${pvCapacity.toFixed(2)} kWp`,
+                    'Area': area,
+                    'Ave-12 Month Solar Generation': `${refGen.toFixed(2)} kWh`
+                };
+            }
+            return null;
+        }
+
+        function formatPrintDate() {
+            const now = new Date();
+            return now.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function getClientName() {
+            const el = document.getElementById('client-name');
+            return el && el.value.trim() ? el.value.trim() : '';
+        }
+
+        // Picks whichever bill figure is the client's true final payable amount:
+        // the client's own Actual TNB Bill (if entered) beats everything, since it's
+        // the real invoiced amount and isn't affected by future AFA/Caj Peruncitan
+        // changes. Otherwise "Real ATAP Bill After Insentif" for TOU accounts, or
+        // "Final ATAP Bill" for General accounts.
+        function getFinalBillKey(result) {
+            if (result['Actual TNB Bill (RM)'] !== undefined) return 'Actual TNB Bill (RM)';
+            return result['Real ATAP Bill After Insentif (RM)'] !== undefined ?
+                'Real ATAP Bill After Insentif (RM)' : 'Final ATAP Bill (RM)';
+        }
+
+        // Friendly label for whichever bill figure getFinalBillKey() resolved to.
+        function getFinalBillLabel(finalBillKey) {
+            if (finalBillKey === 'Actual TNB Bill (RM)') return 'Actual TNB Bill';
+            if (finalBillKey === 'Real ATAP Bill After Insentif (RM)') return 'Real Bill (with Insentif)';
+            return 'Final ATAP Bill';
+        }
+
+        // If the user filled in an "Actual TNB Bill" amount, splice it into the result
+        // object right after our own calculated final-bill row, and recompute savings
+        // against that real figure instead of our estimate. Because AFA and Caj
+        // Peruncitan can shift slightly month to month, this keeps the reported
+        // savings tied to what the client was really charged rather than our estimate.
+        // This is called by EVERY calculate_* button handler below (single-month and
+        // trend), so the actual bill entered by the user always wins over the estimate.
+        function applyActualBillOverride(result, actualBillRaw) {
+            const actualBill = parseFloat(actualBillRaw);
+            if (actualBillRaw === '' || actualBillRaw === null || actualBillRaw === undefined || isNaN(actualBill) || actualBill < 0) {
+                return result;
+            }
+
+            const estimateKey = getFinalBillKey(result); // resolves to our calculated estimate at this point
+            const newResult = {};
+            for (const key in result) {
+                newResult[key] = result[key];
+                if (key === estimateKey) {
+                    newResult['Actual TNB Bill (RM)'] = round(actualBill, 2);
+                }
+            }
+            newResult['Estimated Monthly Savings (RM)'] = round(newResult['Bill Without Solar (RM)'] - actualBill, 2);
+            return newResult;
+        }
+
+        function showResults(result) {
+            resultsBody.innerHTML = '';
+            resultsSection.classList.remove('animate-slide-in');
+            resultsSection.classList.remove('hidden');
+
+            requestAnimationFrame(() => { resultsSection.classList.add('animate-slide-in'); });
+
+            resultMessage.className = 'p-4 rounded-md font-medium';
+
+            // Client name banner (on-screen)
+            const clientDiv = document.getElementById('calc-print-client');
+            const clientName = getClientName();
+            if (clientName) {
+                clientDiv.innerText = `Prepared for: ${clientName}`;
+                clientDiv.classList.remove('hidden');
+            } else {
+                clientDiv.classList.add('hidden');
+            }
+
+            // Print letterhead
+            document.getElementById('calc-print-date').innerText = formatPrintDate();
+            document.getElementById('calc-print-client-meta').innerHTML = clientName ? `Client: <strong>${clientName}</strong>` : '';
+            document.getElementById('calc-print-subtitle').innerText = result['Tariff Category'] || 'Estimated TNB bill under the ATAP scheme';
+
+            // Print summary cards
+            const calcSummary = document.getElementById('calc-print-summary');
+            calcSummary.innerHTML = '';
+            const finalBillKey = getFinalBillKey(result);
+            if (typeof result[finalBillKey] === 'number') {
+                const finalBillLabel = getFinalBillLabel(finalBillKey);
+                calcSummary.innerHTML = `
+                    <div class="print-summary-card accent-sky">
+                        <div class="label">Bill Without Solar</div>
+                        <div class="value">RM ${result['Bill Without Solar (RM)'].toFixed(2)}</div>
+                    </div>
+                    <div class="print-summary-card accent-orange">
+                        <div class="label">${finalBillLabel}</div>
+                        <div class="value">RM ${result[finalBillKey].toFixed(2)}</div>
+                    </div>
+                    <div class="print-summary-card accent-green">
+                        <div class="label">Estimated Savings</div>
+                        <div class="value">RM ${result['Estimated Monthly Savings (RM)'].toFixed(2)}</div>
+                        <div class="sub">${result['Day-time Consumption Ratio (%)']}% self-consumed</div>
+                    </div>`;
+            }
+
+            if (result.error) {
+                resultMessage.classList.add('bg-red-100', 'text-red-700');
+                resultMessage.innerText = `Error: ${result.error}`;
+                delete result.error;
+            } else {
+                resultMessage.classList.add('bg-green-100', 'text-green-700');
+                resultMessage.innerText = 'Calculation successful!';
+            }
+
+            let delay = 0;
+            const stagger = 0.1;
+            const slideInDuration = 1;
+
+            for (const key in result) {
+                if (result.hasOwnProperty(key) && !key.startsWith('_')) {
+                    const row = document.createElement('tr');
+                    row.classList.add('result-row-animate');
+                    const animationDelay = (slideInDuration + delay).toFixed(2) + 's';
+                    row.style.animationDelay = animationDelay;
+                    delay += stagger;
+
+                    let value = typeof result[key] === 'number' ? result[key].toFixed(2) : result[key];
+                    if (typeof result[key] === 'number') {
+                        if (key.includes('RM')) {
+                            value = `RM ${value}`;
+                        } else if (key.includes('(kWh)')) {
+                            value = `${value} kWh`;
+                        } else if (key.includes('(kW)')) {
+                            value = `${value} kW`;
+                        } else if (key.includes('(%)')) {
+                            value = `${value}%`;
+                        }
+                    }
+
+                    // Friendlier row labels: sun/moon for day/night usage, and a clear
+                    // badge on whichever bill row is our estimate vs. the client's real bill.
+                    let displayKey = key;
+                    if (key === 'Day-time Consumption Ratio (%)') displayKey = '☀️ ' + key + ' (from your solar)';
+                    if (key === 'Night-time Consumption Ratio (%)') displayKey = '🌙 ' + key + ' (bought from TNB)';
+                    if ((key === 'Final ATAP Bill (RM)' || key === 'Real ATAP Bill After Insentif (RM)') && result['Actual TNB Bill (RM)'] !== undefined) {
+                        displayKey = key + ' — our estimate';
+                    }
+                    if (key === 'Actual TNB Bill (RM)') {
+                        displayKey = '✅ ' + key + ' (used for your savings)';
+                    }
+
+                    const isFinalBillRow = (key === finalBillKey);
+                    row.innerHTML = `
+                        <th class="font-bold text-gray-700${isFinalBillRow ? ' text-[#0f1e35]' : ''}">${displayKey}</th>
+                        <td class="text-gray-900${isFinalBillRow ? ' font-bold text-lg' : ''}">${value}</td>
+                    `;
+                    resultsBody.appendChild(row);
+                }
+            }
+
+            document.getElementById('result-explanation').innerHTML = generateAtapExplanation(result);
+        }
+
+        // Builds the plain-language explanation shown after a single-month ATAP result.
+        function generateAtapExplanation(result) {
+            const billWithoutSolar = result['Bill Without Solar (RM)'];
+            const finalBillKey = getFinalBillKey(result);
+            const finalBill = result[finalBillKey];
+            const savings = result['Estimated Monthly Savings (RM)'];
+            const dayRatio = result['Day-time Consumption Ratio (%)'];
+            const nightRatio = result['Night-time Consumption Ratio (%)'];
+            const exportCreditApplied = result['Export Credit Applied (RM)'];
+            const creditCapped = result['_creditCapped'];
+            const exportCreditRaw = result['_exportCreditRaw'];
+            const insentifAdjustment = result['Pelarasan Insentif Adjustment (RM)'];
+
+            if (typeof billWithoutSolar !== 'number' || typeof finalBill !== 'number') return '';
+
+            const savingsPct = billWithoutSolar > 0 ? round((savings / billWithoutSolar) * 100, 1) : 0;
+
+            let html = '<div class="explain-box"><h4>🔎 Your Solar Savings Explained</h4><ul>';
+
+html += `<li><strong>Without solar energy</strong>, your estimated electricity cost from TNB would have been around <strong>RM ${billWithoutSolar.toFixed(2)}</strong> for this month.</li>`;
+
+html += `<li><strong>With your solar system</strong>, part of your electricity usage was supplied by your own solar panels, reducing the amount of electricity purchased from TNB. Your estimated bill is <strong>RM ${finalBill.toFixed(2)}</strong>.</li>`;
+
+html += `<li>Your solar system helped reduce your electricity cost by approximately <strong>RM ${savings.toFixed(2)}</strong>, which is around <strong>${savingsPct}%</strong> savings compared to using TNB electricity alone.</li>`;
+
+html += `<li>During the month, <strong>${dayRatio}%</strong> of your electricity usage was supplied directly by your solar panels, while <strong>${nightRatio}%</strong> was supplied by TNB. Solar production naturally changes depending on sunlight availability, weather conditions, and your electricity usage pattern.</li>`;
+
+html += `<li>Any excess solar energy exported back to TNB provided a credit of <strong>RM ${exportCreditApplied.toFixed(2)}</strong> on this bill. This credit helps reduce eligible electricity charges, while fixed charges, taxes, and other applicable fees remain unchanged according to billing rules.</li>`;
+
+            if (typeof insentifAdjustment === 'number') {
+                html += `<li>A <strong>Pelarasan Insentif</strong> adjustment of <strong>RM ${insentifAdjustment.toFixed(2)}</strong> (as shown on the client's own TNB bill) was added on top of the ATAP bill to arrive at the final, real amount payable of <strong>RM ${finalBill.toFixed(2)}</strong>.</li>`;
+            }
+
+html += `<li><strong>How to maximise your solar benefits:</strong> Using electricity when your solar panels are producing energy (usually during daylight hours) allows more of your solar power to be used directly, helping you achieve greater savings over time. Activities such as washing, ironing, or running equipment during sunny hours can help utilise your solar energy efficiently.</li>`;
+
+html += '</ul>';
+            if (creditCapped) {
+                html += `<div class="explain-warn">⚠️ <strong>Heads up:</strong> your exported solar power was worth RM ${exportCreditRaw.toFixed(2)}, but only RM ${exportCreditApplied.toFixed(2)} could be credited to your bill — the rest could not be used because credits are capped and don't roll over to next month. If this keeps happening, adding a battery, or using more appliances during sunny hours, would help you capture that extra value instead of losing it.</div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // --- Trend Tab: Tariff Selector Logic ---
+        const trendTariffTypeSelect = document.getElementById('trend-tariff-type-select');
+        const trendTariffCategorySelect = document.getElementById('trend-tariff-category-select');
+        const trendForms = [
+            document.getElementById('trend-dg-form'),
+            document.getElementById('trend-dt-form'),
+            document.getElementById('trend-nd-form')
+        ];
+        const trendNdDemandRow = document.getElementById('trend-nd-demand-row');
+        const trendNdPeakRow = document.getElementById('trend-nd-peak-row');
+        const trendNdInsentifRow = document.getElementById('trend-nd-insentif-row');
+        const trendResultsSection = document.getElementById('trend-results-section');
+        let trendChartInstance = null;
+
+        function updateTrendCategoryOptions(tariffType) {
+            trendTariffCategorySelect.innerHTML = '';
+            const options = tariffType === 'domestic' ? DomesticCategoryOptions : NonDomesticCategoryOptions;
+            for (const key in options) {
+                if (options.hasOwnProperty(key)) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = options[key];
+                    trendTariffCategorySelect.appendChild(option);
+                }
+            }
+        }
+
+        function updateTrendFormVisibility(tariffType, category) {
+            trendForms.forEach(form => form.classList.add('hidden'));
+            trendNdDemandRow.classList.add('hidden');
+            trendNdPeakRow.classList.add('hidden');
+            trendNdInsentifRow.classList.add('hidden');
+            trendResultsSection.classList.add('hidden');
+
+            let targetForm;
+            if (tariffType === 'domestic') {
+                targetForm = category === 'general' ?
+                    document.getElementById('trend-dg-form') :
+                    document.getElementById('trend-dt-form');
+            } else {
+                targetForm = document.getElementById('trend-nd-form');
+                if (category.includes('TOU')) {
+                    trendNdPeakRow.classList.remove('hidden');
+                    trendNdInsentifRow.classList.remove('hidden');
+                }
+                if (['medium_General', 'medium_TOU', 'high_General', 'high_TOU'].includes(category)) {
+                    trendNdDemandRow.classList.remove('hidden');
+                }
+            }
+            if (targetForm) targetForm.classList.remove('hidden');
+        }
+
+        trendTariffTypeSelect.addEventListener('change', (e) => {
+            updateTrendCategoryOptions(e.target.value);
+            trendTariffCategorySelect.value = trendTariffCategorySelect.options[0].value;
+            updateTrendFormVisibility(e.target.value, trendTariffCategorySelect.value);
+        });
+
+        trendTariffCategorySelect.addEventListener('change', (e) => {
+            updateTrendFormVisibility(trendTariffTypeSelect.value, e.target.value);
+        });
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCategoryOptions('domestic');
+            updateFormVisibility('domestic', 'general');
+            updateTrendCategoryOptions('domestic');
+            updateTrendFormVisibility('domestic', 'general');
+            updateAverageGeneration();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !alertModal.classList.contains('hidden')) {
+                    alertModal.classList.add('hidden');
+                }
+            });
+
+            document.querySelectorAll('.a11y-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.documentElement.classList.remove('text-large', 'text-xlarge');
+                    if (btn.dataset.size === 'large') document.documentElement.classList.add('text-large');
+                    if (btn.dataset.size === 'xlarge') document.documentElement.classList.add('text-xlarge');
+                });
+            });
+        });
+
+        // --- Tab Switching ---
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                tabPanes.forEach(pane => pane.classList.add('hidden'));
+                const tabId = button.id.replace('tab-', 'content-');
+                document.getElementById(tabId).classList.remove('hidden');
+            });
+        });
+
+        calcTariffTypeSelect.addEventListener('change', (e) => {
+            updateCategoryOptions(e.target.value);
+            calcTariffCategorySelect.value = calcTariffCategorySelect.options[0].value;
+            updateFormVisibility(e.target.value, calcTariffCategorySelect.value);
+        });
+
+        calcTariffCategorySelect.addEventListener('change', (e) => {
+            updateFormVisibility(calcTariffTypeSelect.value, e.target.value);
+        });
+
+        const dtPeakSlider = document.getElementById('atap-dt-peak');
+        const ndPeakSlider = document.getElementById('atap-nd-peak');
+        if (dtPeakSlider) dtPeakSlider.addEventListener('input', (e) => { dtPeakValue.innerText = `${e.target.value}%`; });
+        if (ndPeakSlider) ndPeakSlider.addEventListener('input', (e) => { ndPeakValue.innerText = `${e.target.value}%`; });
+
+        // --- Core Calculation Logic ---
+
+        document.getElementById('atap-dg-button').addEventListener('calculate_atap_dg', () => {
+            const importKwh = parseFloat(document.getElementById('atap-dg-import').value);
+            const solarGen = parseFloat(document.getElementById('atap-dg-solar').value);
+            const exportKwh = parseFloat(document.getElementById('atap-dg-export').value);
+            const chargeKwh = parseFloat(document.getElementById('atap-dg-charge').value) || 0;
+            const dischargeKwh = parseFloat(document.getElementById('atap-dg-discharge').value) || 0;
+            const afa = parseFloat(document.getElementById('atap-dg-afa').value);
+            const actualBillRaw = document.getElementById('atap-dg-actual-bill').value;
+
+            if (isNaN(importKwh) || importKwh < 0) { showAlert("Please enter a valid Import (kWh)."); return; }
+            if (isNaN(solarGen) || solarGen < 0) { showAlert("Please enter a valid Solar Generation (kWh)."); return; }
+            if (isNaN(exportKwh) || exportKwh < 0) { showAlert("Please enter a valid Export (kWh)."); return; }
+            if (exportKwh > solarGen) { showAlert("Export (kWh) cannot exceed Solar Generation (kWh)."); return; }
+            if (chargeKwh > round(solarGen - exportKwh, 2)) { showAlert("Battery Charge (kWh) cannot exceed Solar Generation minus Export."); return; }
+            if (actualBillRaw === '' || isNaN(parseFloat(actualBillRaw)) || parseFloat(actualBillRaw) < 0) { showAlert("Please enter the Actual TNB Bill Amount (RM)."); return; }
+
+            let result = calculate_atap_domestic_general(importKwh, solarGen, exportKwh, chargeKwh, dischargeKwh, afa);
+            result = applyActualBillOverride(result, actualBillRaw);
+            const pvInfo = getSystemInfoData();
+            if (pvInfo) result = Object.assign({}, pvInfo, result);
+            showResults(result);
+            if (!result.error) {
+                showToast(`Your Final ATAP Bill is RM ${result[getFinalBillKey(result)].toFixed(2)}`);
+            }
+        });
+
+        document.getElementById('atap-dt-button').addEventListener('calculate_atap_dt', () => {
+            const importKwh = parseFloat(document.getElementById('atap-dt-import').value);
+            const solarGen = parseFloat(document.getElementById('atap-dt-solar').value);
+            const exportKwh = parseFloat(document.getElementById('atap-dt-export').value);
+            const chargeKwh = parseFloat(document.getElementById('atap-dt-charge').value) || 0;
+            const dischargeKwh = parseFloat(document.getElementById('atap-dt-discharge').value) || 0;
+            const peakPercent = parseFloat(document.getElementById('atap-dt-peak').value);
+            const afa = parseFloat(document.getElementById('atap-dt-afa').value);
+            const insentif = parseFloat(document.getElementById('atap-dt-insentif').value) || 0;
+            const actualBillRaw = document.getElementById('atap-dt-actual-bill').value;
+
+            if (isNaN(importKwh) || importKwh < 0) { showAlert("Please enter a valid Import (kWh)."); return; }
+            if (isNaN(solarGen) || solarGen < 0) { showAlert("Please enter a valid Solar Generation (kWh)."); return; }
+            if (isNaN(exportKwh) || exportKwh < 0) { showAlert("Please enter a valid Export (kWh)."); return; }
+            if (exportKwh > solarGen) { showAlert("Export (kWh) cannot exceed Solar Generation (kWh)."); return; }
+            if (chargeKwh > round(solarGen - exportKwh, 2)) { showAlert("Battery Charge (kWh) cannot exceed Solar Generation minus Export."); return; }
+            if (actualBillRaw === '' || isNaN(parseFloat(actualBillRaw)) || parseFloat(actualBillRaw) < 0) { showAlert("Please enter the Actual TNB Bill Amount (RM)."); return; }
+
+            let result = calculate_atap_domestic_tou(importKwh, solarGen, exportKwh, chargeKwh, dischargeKwh, peakPercent, afa, insentif);
+            result = applyActualBillOverride(result, actualBillRaw);
+            const pvInfo = getSystemInfoData();
+            if (pvInfo) result = Object.assign({}, pvInfo, result);
+            showResults(result);
+            if (!result.error) {
+                showToast(`Your Real ATAP Bill is RM ${result[getFinalBillKey(result)].toFixed(2)}`);
+            }
+        });
+
+        document.getElementById('atap-nd-button').addEventListener('calculate_atap_nd', () => {
+            const tariffCategory = calcTariffCategorySelect.value;
+            const importKwh = parseFloat(document.getElementById('atap-nd-import').value);
+            const solarGen = parseFloat(document.getElementById('atap-nd-solar').value);
+            const exportKwh = parseFloat(document.getElementById('atap-nd-export').value);
+            const chargeKwh = parseFloat(document.getElementById('atap-nd-charge').value) || 0;
+            const dischargeKwh = parseFloat(document.getElementById('atap-nd-discharge').value) || 0;
+            const maxDemand = document.getElementById('atap-nd-demand').value ? parseFloat(document.getElementById('atap-nd-demand').value) : 0;
+            const peakPercent = parseFloat(document.getElementById('atap-nd-peak').value);
+            const smpRate = parseFloat(document.getElementById('atap-nd-smp').value);
+            const afa = parseFloat(document.getElementById('atap-nd-afa').value);
+            const insentif = parseFloat(document.getElementById('atap-nd-insentif').value) || 0;
+            const actualBillRaw = document.getElementById('atap-nd-actual-bill').value;
+
+            if (isNaN(importKwh) || importKwh < 0) { showAlert("Please enter a valid Import (kWh)."); return; }
+            if (isNaN(solarGen) || solarGen < 0) { showAlert("Please enter a valid Solar Generation (kWh)."); return; }
+            if (isNaN(exportKwh) || exportKwh < 0) { showAlert("Please enter a valid Export (kWh)."); return; }
+            if (exportKwh > solarGen) { showAlert("Export (kWh) cannot exceed Solar Generation (kWh)."); return; }
+            if (chargeKwh > round(solarGen - exportKwh, 2)) { showAlert("Battery Charge (kWh) cannot exceed Solar Generation minus Export."); return; }
+            if (isNaN(smpRate) || smpRate < 0) { showAlert("Please enter a valid Average SMP rate (RM/kWh)."); return; }
+            if (actualBillRaw === '' || isNaN(parseFloat(actualBillRaw)) || parseFloat(actualBillRaw) < 0) { showAlert("Please enter the Actual TNB Bill Amount (RM)."); return; }
+
+            let result = calculate_atap_nd(tariffCategory, importKwh, solarGen, exportKwh, chargeKwh, dischargeKwh, maxDemand, peakPercent, smpRate, afa, insentif);
+            result = applyActualBillOverride(result, actualBillRaw);
+            const pvInfo = getSystemInfoData();
+            if (pvInfo) result = Object.assign({}, pvInfo, result);
+            showResults(result);
+            if (!result.error) {
+                showToast(`Your Final ATAP Bill is RM ${result[getFinalBillKey(result)].toFixed(2)}`);
+            }
+        });
+
+        // --- 3-Month Trend Analysis Logic ---
+
+        function pctChange(from, to) {
+            if (!from || from === 0) return to === 0 ? 0 : null;
+            return round(((to - from) / Math.abs(from)) * 100, 1);
+        }
+
+        const TREND_METRIC_ROWS = [
+            { key: 'Total Consumption (kWh)', unit: 'kWh', lowerIsBetter: true },
+            { key: 'PV to Load Consumption (kWh)', unit: 'kWh', lowerIsBetter: false },
+            { key: 'Day-time Consumption Ratio (%)', unit: '%', lowerIsBetter: false },
+            { key: 'Bill Without Solar (RM)', unit: 'RM', lowerIsBetter: true },
+            { key: 'Grid Import Bill Before Credit (RM)', unit: 'RM', lowerIsBetter: true },
+            { key: 'Export Credit Applied (RM)', unit: 'RM', lowerIsBetter: false },
+            { key: 'Final ATAP Bill (RM)', unit: 'RM', lowerIsBetter: true },
+            { key: 'Pelarasan Insentif Adjustment (RM)', unit: 'RM', lowerIsBetter: true },
+            { key: 'Real ATAP Bill After Insentif (RM)', unit: 'RM', lowerIsBetter: true },
+            { key: 'Actual TNB Bill (RM)', unit: 'RM', lowerIsBetter: true },
+            { key: 'Estimated Monthly Savings (RM)', unit: 'RM', lowerIsBetter: false },
+        ];
+
+        // Returns a small coloured arrow badge for a month-over-month change,
+        // using "good"/"bad" framing based on whether lower is better for that metric.
+        function trendArrowBadge(fromVal, toVal, lowerIsBetter) {
+            const pct = pctChange(fromVal, toVal);
+            if (pct === null) return '<span class="trend-flat">—</span>';
+            if (Math.abs(pct) < 3) return `<span class="trend-flat">→ steady</span>`;
+            const up = pct > 0;
+            const good = lowerIsBetter ? !up : up;
+            const arrow = up ? '↑' : '↓';
+            const cls = good ? 'trend-down' : 'trend-up'; // reuse: trend-down (green) = good, trend-up (red) = bad
+            return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</span>`;
+        }
+
+        function renderTrendResults(monthResults, monthLabels) {
+            trendResultsSection.classList.remove('hidden');
+            requestAnimationFrame(() => { trendResultsSection.classList.add('animate-slide-in'); });
+
+            const msgDiv = document.getElementById('trend-result-message');
+            msgDiv.className = 'p-4 rounded-md font-medium bg-green-100 text-green-700';
+            msgDiv.innerText = 'Trend analysis complete!';
+
+            const finalBillKey = getFinalBillKey(monthResults[0]);
+            const finalBillLabel = getFinalBillLabel(finalBillKey);
+
+            // Client name banner (on-screen)
+            const clientDiv = document.getElementById('trend-print-client');
+            const clientName = getClientName();
+            if (clientName) {
+                clientDiv.innerText = `Prepared for: ${clientName}`;
+                clientDiv.classList.remove('hidden');
+            } else {
+                clientDiv.classList.add('hidden');
+            }
+
+            // Print letterhead
+            document.getElementById('trend-print-date').innerText = formatPrintDate();
+            document.getElementById('trend-print-client-meta').innerHTML = clientName ? `Client: <strong>${clientName}</strong>` : '';
+            document.getElementById('trend-print-subtitle').innerText = `${monthResults[0]['Tariff Category'] || 'ATAP'} · ${monthLabels[0]} – ${monthLabels[2]}`;
+
+            // Print summary cards (3-month averages)
+            const avgFinalBill = round(monthResults.reduce((s, r) => s + r[finalBillKey], 0) / 3, 2);
+            const avgSavings = round(monthResults.reduce((s, r) => s + r['Estimated Monthly Savings (RM)'], 0) / 3, 2);
+            const avgNoSolar = round(monthResults.reduce((s, r) => s + r['Bill Without Solar (RM)'], 0) / 3, 2);
+            const avgSelfConsumption = round(monthResults.reduce((s, r) => s + r['Day-time Consumption Ratio (%)'], 0) / 3, 1);
+            const trendSummary = document.getElementById('trend-print-summary');
+            trendSummary.innerHTML = `
+                <div class="print-summary-card accent-sky">
+                    <div class="label">Avg. Bill Without Solar</div>
+                    <div class="value">RM ${avgNoSolar.toFixed(2)}</div>
+                </div>
+                <div class="print-summary-card accent-orange">
+                    <div class="label">Avg. ${finalBillLabel}</div>
+                    <div class="value">RM ${avgFinalBill.toFixed(2)}</div>
+                </div>
+                <div class="print-summary-card accent-green">
+                    <div class="label">Avg. Monthly Savings</div>
+                    <div class="value">RM ${avgSavings.toFixed(2)}</div>
+                    <div class="sub">${avgSelfConsumption}% avg. self-consumed</div>
+                </div>`;
+
+            // On-screen headline cards (simple, big numbers — easy to read at a glance)
+            const headlineDiv = document.getElementById('trend-headline-cards');
+            if (headlineDiv) {
+                headlineDiv.innerHTML = `
+                    <div class="print-summary-card accent-sky">
+                        <div class="label">Average bill WITHOUT solar</div>
+                        <div class="value">RM ${avgNoSolar.toFixed(2)}</div>
+                        <div class="sub">per month, if you had no panels</div>
+                    </div>
+                    <div class="print-summary-card accent-orange">
+                        <div class="label">Average ${finalBillLabel.toUpperCase()}</div>
+                        <div class="value">RM ${avgFinalBill.toFixed(2)}</div>
+                        <div class="sub">what you actually pay now</div>
+                    </div>
+                    <div class="print-summary-card accent-green">
+                        <div class="label">Average money saved</div>
+                        <div class="value">RM ${avgSavings.toFixed(2)}</div>
+                        <div class="sub">${avgSelfConsumption}% of power used straight from panels</div>
+                    </div>`;
+            }
+
+            // Header
+            const header = document.getElementById('trend-results-header');
+            header.innerHTML = `<th>Metric</th><th>${monthLabels[0]}</th><th>${monthLabels[1]}</th><th>${monthLabels[2]}</th><th>Change (M1 → M3)</th>`;
+
+            // Body
+            const body = document.getElementById('trend-results-body');
+            body.innerHTML = '';
+            TREND_METRIC_ROWS.forEach(row => {
+                const v1 = monthResults[0][row.key];
+                const v2 = monthResults[1][row.key];
+                const v3 = monthResults[2][row.key];
+                if (typeof v1 !== 'number' || typeof v2 !== 'number' || typeof v3 !== 'number') return;
+                const fmt = (v) => row.unit === 'RM' ? `RM ${v.toFixed(2)}` : `${v.toFixed(2)} ${row.unit === '%' ? '%' : row.unit}`;
+                const tr = document.createElement('tr');
+                const isFinalBillRow = (row.key === finalBillKey);
+                tr.innerHTML = `<th class="font-bold text-gray-700${isFinalBillRow ? ' text-[#0f1e35]' : ''}">${row.key}</th>
+                    <td${isFinalBillRow ? ' class="font-bold"' : ''}>${fmt(v1)}</td><td${isFinalBillRow ? ' class="font-bold"' : ''}>${fmt(v2)}</td><td${isFinalBillRow ? ' class="font-bold"' : ''}>${fmt(v3)}</td>
+                    <td>${trendArrowBadge(v1, v3, row.lowerIsBetter)}</td>`;
+                body.appendChild(tr);
+            });
+
+            // Chart
+            const ctx = document.getElementById('trend-chart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(ctx, {
+                data: {
+                    labels: monthLabels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Total Consumption (kWh)',
+                            data: monthResults.map(r => r['Total Consumption (kWh)']),
+                            backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: finalBillLabel + ' (RM)',
+                            data: monthResults.map(r => r[finalBillKey]),
+                            borderColor: '#0f1e35',
+                            backgroundColor: '#0f1e35',
+                            yAxisID: 'y1',
+                            tension: 0.3
+                        },
+                        {
+                            type: 'line',
+                            label: 'Savings (RM)',
+                            data: monthResults.map(r => r['Estimated Monthly Savings (RM)']),
+                            borderColor: '#16a34a',
+                            backgroundColor: '#16a34a',
+                            yAxisID: 'y1',
+                            borderDash: [6, 4],
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { type: 'linear', position: 'left', title: { display: true, text: 'kWh' } },
+                        y1: { type: 'linear', position: 'right', title: { display: true, text: 'RM' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+
+            // Conclusion
+            document.getElementById('trend-conclusion').innerHTML = generateTrendConclusion(monthResults, monthLabels);
+        }
+
+        function trendWord(pct) {
+            if (pct === null || isNaN(pct)) return 'unclear (insufficient data)';
+            if (Math.abs(pct) < 3) return 'roughly stable';
+            return pct > 0 ? `up ${Math.abs(pct).toFixed(1)}%` : `down ${Math.abs(pct).toFixed(1)}%`;
+        }
+
+        function generateTrendConclusion(monthResults, monthLabels) {
+            const finalBillKey = getFinalBillKey(monthResults[0]);
+            const consumption = monthResults.map(r => r['Total Consumption (kWh)']);
+            const bills = monthResults.map(r => r[finalBillKey]);
+            const billsNoSolar = monthResults.map(r => r['Bill Without Solar (RM)']);
+            const savings = monthResults.map(r => r['Estimated Monthly Savings (RM)']);
+            const dayRatio = monthResults.map(r => r['Day-time Consumption Ratio (%)']);
+
+            const consumptionPct = pctChange(consumption[0], consumption[2]);
+            const billPct = pctChange(bills[0], bills[2]);
+            const savingsPct = pctChange(savings[0], savings[2]);
+
+            const avgConsumption = round(consumption.reduce((a, b) => a + b, 0) / 3, 1);
+            const avgBill = round(bills.reduce((a, b) => a + b, 0) / 3, 2);
+            const avgBillNoSolar = round(billsNoSolar.reduce((a, b) => a + b, 0) / 3, 2);
+            const avgSavings = round(savings.reduce((a, b) => a + b, 0) / 3, 2);
+            const avgRatio = round(dayRatio.reduce((a, b) => a + b, 0) / 3, 1);
+            const avgSavingsPct = avgBillNoSolar > 0 ? round((avgSavings / avgBillNoSolar) * 100, 1) : 0;
+
+            const cappedMonths = monthResults
+                .map((r, i) => r['_creditCapped'] ? monthLabels[i] : null)
+                .filter(Boolean);
+
+            let points = [];
+
+            points.push(`📊 <strong>Your electricity use</strong> over ${monthLabels[0]}, ${monthLabels[1]} and ${monthLabels[2]} is ${trendWord(consumptionPct)}, averaging about <strong>${avgConsumption.toFixed(1)} kWh a month</strong>.`);
+            points.push(`💰 <strong>Your actual bill</strong> (after solar) is ${trendWord(billPct)} across these 3 months, averaging <strong>RM ${avgBill.toFixed(2)} a month</strong>. Your savings compared to having no solar are ${trendWord(savingsPct)}, averaging <strong>RM ${avgSavings.toFixed(2)} a month</strong>.`);
+            points.push(`☀️ On average, <strong>${avgRatio.toFixed(1)}%</strong> of the power you used came straight from your own solar panels. The rest still had to be bought from TNB, mostly at night.`);
+            points.push(`✅ <strong>In short:</strong> without solar, you would be paying about <strong>RM ${avgBillNoSolar.toFixed(2)}</strong> a month. With your solar panels, you are paying about <strong>RM ${avgBill.toFixed(2)}</strong> a month instead — a saving of roughly <strong>RM ${avgSavings.toFixed(2)}</strong> every month (about ${avgSavingsPct}% less). Most of this saving comes from using your own solar power directly; a smaller part comes from the credit for power you sent back to TNB, which is capped and does not carry over to the next month.`);
+
+            if (cappedMonths.length > 0) {
+                points.push(`⚠️ <strong>Watch out:</strong> in ${cappedMonths.join(', ')}, you exported more solar power than could be fully credited to your bill — some value was lost because credits are capped and unused credit does not roll over. A bigger battery, or using more appliances during sunny hours (e.g. laundry, ironing, water pump) instead of exporting, would help you keep more of that value.`);
+            }
+
+            let verdict;
+            if (consumptionPct !== null && consumptionPct > 10 && (savingsPct === null || savingsPct <= 0)) {
+                verdict = `👉 <strong>Overall:</strong> your electricity use is rising faster than your savings. It may be worth checking for new appliances or habits using more power (e.g. more air-conditioner use), or considering a bigger solar/battery system.`;
+            } else if (avgRatio < 40) {
+                verdict = `👉 <strong>Overall:</strong> your solar panels are only covering a modest share of your usage (about ${avgRatio.toFixed(1)}%). Since export credits are capped, try to use more power during the day — this usually saves more than exporting extra solar power.`;
+            } else if (savingsPct !== null && savingsPct > 5) {
+                verdict = `👉 <strong>Overall:</strong> good news — your savings are trending upward over these 3 months. Your solar system is working well for you.`;
+            } else {
+                verdict = `👉 <strong>Overall:</strong> your usage and bill have been steady over these 3 months, with consistent solar savings each month.`;
+            }
+            points.push(verdict);
+
+            return `<h3 class="text-lg font-bold text-gray-800 mb-3">🧾 What these 3 months tell you</h3><ul class="list-disc pl-5 space-y-2">${points.map(p => `<li>${p}</li>`).join('')}</ul>`;
+        }
+
+        document.getElementById('trend-dg-button').addEventListener('calculate_trend_dg', () => {
+            const monthResults = [];
+            const monthLabels = [];
+            for (let i = 1; i <= 3; i++) {
+                const importKwh = parseFloat(document.getElementById(`trend-dg-import-${i}`).value);
+                const solarGen = parseFloat(document.getElementById(`trend-dg-solar-${i}`).value);
+                const exportKwh = parseFloat(document.getElementById(`trend-dg-export-${i}`).value);
+                const chargeKwh = parseFloat(document.getElementById(`trend-dg-charge-${i}`).value) || 0;
+                const dischargeKwh = parseFloat(document.getElementById(`trend-dg-discharge-${i}`).value) || 0;
+                const afa = parseFloat(document.getElementById(`trend-dg-afa-${i}`).value);
+                const label = document.getElementById(`trend-dg-label-${i}`).value || `Month ${i}`;
+                const actualBillRaw = document.getElementById(`trend-dg-actualbill-${i}`).value;
+
+                if (isNaN(importKwh) || isNaN(solarGen) || isNaN(exportKwh)) {
+                    showAlert(`Please fill in Import, Solar Generation, and Export for Month ${i}.`);
+                    return;
+                }
+                if (isNaN(afa)) { showAlert(`Please enter a valid AFA rate for Month ${i}.`); return; }
+                if (exportKwh > solarGen) { showAlert(`Month ${i}: Export cannot exceed Solar Generation.`); return; }
+                if (chargeKwh > round(solarGen - exportKwh, 2)) { showAlert(`Month ${i}: Battery Charge cannot exceed Solar Generation minus Export.`); return; }
+                if (actualBillRaw === '' || isNaN(parseFloat(actualBillRaw)) || parseFloat(actualBillRaw) < 0) { showAlert(`Please enter the Actual TNB Bill (RM) for Month ${i}.`); return; }
+
+                let monthResult = calculate_atap_domestic_general(importKwh, solarGen, exportKwh, chargeKwh, dischargeKwh, afa);
+                monthResult = applyActualBillOverride(monthResult, actualBillRaw);
+                monthResults.push(monthResult);
+                monthLabels.push(label);
+            }
+            renderTrendResults(monthResults, monthLabels);
+            showToast('3-month trend analysis complete!');
+        });
+
+        document.getElementById('trend-dt-button').addEventListener('calculate_trend_dt', () => {
+            const monthResults = [];
+            const monthLabels = [];
+            for (let i = 1; i <= 3; i++) {
+                const importKwh = parseFloat(document.getElementById(`trend-dt-import-${i}`).value);
+                const solarGen = parseFloat(document.getElementById(`trend-dt-solar-${i}`).value);
+                const exportKwh = parseFloat(document.getElementById(`trend-dt-export-${i}`).value);
+                const chargeKwh = parseFloat(document.getElementById(`trend-dt-charge-${i}`).value) || 0;
+                const dischargeKwh = parseFloat(document.getElementById(`trend-dt-discharge-${i}`).value) || 0;
+                const peakPercent = parseFloat(document.getElementById(`trend-dt-peak-${i}`).value) || 0;
+                const afa = parseFloat(document.getElementById(`trend-dt-afa-${i}`).value);
+                const insentifEl = document.getElementById(`trend-dt-insentif-${i}`);
+                const insentif = insentifEl ? (parseFloat(insentifEl.value) || 0) : 0;
+                const label = document.getElementById(`trend-dt-label-${i}`).value || `Month ${i}`;
+                const actualBillRaw = document.getElementById(`trend-dt-actualbill-${i}`).value;
+
+                if (isNaN(importKwh) || isNaN(solarGen) || isNaN(exportKwh)) {
+                    showAlert(`Please fill in Import, Solar Generation, and Export for Month ${i}.`);
+                    return;
+                }
+                if (isNaN(afa)) { showAlert(`Please enter a valid AFA rate for Month ${i}.`); return; }
+                if (exportKwh > solarGen) { showAlert(`Month ${i}: Export cannot exceed Solar Generation.`); return; }
+                if (chargeKwh > round(solarGen - exportKwh, 2)) { showAlert(`Month ${i}: Battery Charge cannot exceed Solar Generation minus Export.`); return; }
+                if (actualBillRaw === '' || isNaN(parseFloat(actualBillRaw)) || parseFloat(actualBillRaw) < 0) { showAlert(`Please enter the Actual TNB Bill (RM) for Month ${i}.`); return; }
+
+                let monthResult = calculate_atap_domestic_tou(importKwh, solarGen, exportKwh, chargeKwh, dischargeKwh, peakPercent, afa, insentif);
+                monthResult = applyActualBillOverride(monthResult, actualBillRaw);
+                monthResults.push(monthResult);
+                monthLabels.push(label);
+            }
+            renderTrendResults(monthResults, monthLabels);
+            showToast('3-month trend analysis complete!');
+        });
+
+        document.getElementById('trend-nd-button').addEventListener('calculate_trend_nd', () => {
+            const tariffCategory = trendTariffCategorySelect.value;
+            const smpRate = parseFloat(document.getElementById('trend-nd-smp').value);
+            const monthResults = [];
+            const monthLabels = [];
+
+            if (isNaN(smpRate) || smpRate < 0) { showAlert("Please enter a valid Average SMP rate (RM/kWh)."); return; }
+
+            for (let i = 1; i <= 3; i++) {
+                const importKwh = parseFloat(document.getElementById(`trend-nd-import-${i}`).value);
+                const solarGen = parseFloat(document.getElementById(`trend-nd-solar-${i}`).value);
+                const exportKwh = parseFloat(document.getElementById(`trend-nd-export-${i}`).value);
+                const chargeKwh = parseFloat(document.getElementById(`trend-nd-charge-${i}`).value) || 0;
+                const dischargeKwh = parseFloat(document.getElementById(`trend-nd-discharge-${i}`).value) || 0;
+                const maxDemandEl = document.getElementById(`trend-nd-demand-${i}`);
+                const maxDemand = maxDemandEl && maxDemandEl.value ? parseFloat(maxDemandEl.value) : 0;
+                const peakEl = document.getElementById(`trend-nd-peak-${i}`);
+                const peakPercent = peakEl ? (parseFloat(peakEl.value) || 0) : 0;
+                const afa = parseFloat(document.getElementById(`trend-nd-afa-${i}`).value);
+                const insentifEl = document.getElementById(`trend-nd-insentif-${i}`);
+                const insentif = insentifEl ? (parseFloat(insentifEl.value) || 0) : 0;
+                const label = document.getElementById(`trend-nd-label-${i}`).value || `Month ${i}`;
+                const actualBillRaw = document.getElementById(`trend-nd-actualbill-${i}`).value;
+
+                if (isNaN(importKwh) || isNaN(solarGen) || isNaN(exportKwh)) {
+                    showAlert(`Please fill in Import, Solar Generation, and Export for Month ${i}.`);
+                    return;
+                }
+                if (isNaN(afa)) { showAlert(`Please enter a valid AFA rate for Month ${i}.`); return; }
+                if (exportKwh > solarGen) { showAlert(`Month ${i}: Export cannot exceed Solar Generation.`); return; }
+                if (chargeKwh > round(solarGen - exportKwh, 2)) { showAlert(`Month ${i}: Battery Charge cannot exceed Solar Generation minus Export.`); return; }
+                if (actualBillRaw === '' || isNaN(parseFloat(actualBillRaw)) || parseFloat(actualBillRaw) < 0) { showAlert(`Please enter the Actual TNB Bill (RM) for Month ${i}.`); return; }
+
+                let monthResult = calculate_atap_nd(tariffCategory, importKwh, solarGen, exportKwh, chargeKwh, dischargeKwh, maxDemand, peakPercent, smpRate, afa, insentif);
+                monthResult = applyActualBillOverride(monthResult, actualBillRaw);
+                monthResults.push(monthResult);
+                monthLabels.push(label);
+            }
+            renderTrendResults(monthResults, monthLabels);
+            showToast('3-month trend analysis complete!');
+        });
+
+        document.getElementById('alert-close-btn').addEventListener('click', () => {
+            alertModal.classList.add('hidden');
+        });
+
+        document.querySelectorAll('form.form-pane').forEach(form => {
+            form.onsubmit = function (event) {
+                event.preventDefault();
+                const buttonId = form.querySelector('button').id;
+                triggerCalculation(buttonId);
+            };
+        });
+
+        // --- Print / Save as PDF ---
+        document.getElementById('print-calc-btn').addEventListener('click', () => {
+            document.getElementById('calc-print-area').setAttribute('id', 'print-area');
+            document.body.classList.add('print-mode');
+            window.print();
+            setTimeout(() => {
+                document.getElementById('print-area').setAttribute('id', 'calc-print-area');
+                document.body.classList.remove('print-mode');
+            }, 500);
+        });
+
+        document.getElementById('print-trend-btn').addEventListener('click', () => {
+            document.getElementById('trend-print-area').setAttribute('id', 'print-area');
+            document.body.classList.add('print-mode');
+            window.print();
+            setTimeout(() => {
+                document.getElementById('print-area').setAttribute('id', 'trend-print-area');
+                document.body.classList.remove('print-mode');
+            }, 500);
+        });
+
+        // --- System Info: Average 12-Month Solar Generation reference figure ---
+        // PV Capacity (kWp) is entered by the user for each client/system.
+        // Average 12-Month Solar Generation = PV Capacity (kWp) x Area Factor (kWh/kWp/month)
+        const areaSelect = document.getElementById("sys-area-select");
+        const pvCapacityInput = document.getElementById("sys-pv-capacity");
+        const output = document.getElementById("avg-solar-generation");
+
+        function updateAverageGeneration() {
+            const capacity = parseFloat(pvCapacityInput.value);
+            if (!capacity || capacity <= 0) {
+                output.value = '';
+                return;
+            }
+            const factor = AREA_FACTORS[areaSelect.value];
+            const result = capacity * factor;
+            output.value = result.toFixed(2) + " kWh";
+        }
+
+        areaSelect.addEventListener("change", updateAverageGeneration);
+        pvCapacityInput.addEventListener("input", updateAverageGeneration);
+
+    </script>
+</body>
+
+</html>
